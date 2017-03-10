@@ -146,10 +146,22 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        long latitude = 0;
+        long longitude = 0;
+        Log.d(TAG, "On Map Ready null json: " + (mJSONObjectData == null));
+        try {
+            longitude =
+                    mJSONObjectData.getJSONArray("features").getJSONObject(0)
+                            .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
+            latitude = mJSONObjectData.getJSONArray("features").getJSONObject(0)
+                    .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
 
         // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
+        LatLng sydney = new LatLng(latitude, longitude);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
     }
