@@ -32,12 +32,14 @@ import java.io.IOException;
 
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback {
+        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback,
+        AsyncResponse {
 
     public final String TAG = getClass().getSimpleName();
     public static final String USGS_URL
             = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
     private GoogleMap mMap;
+    DataFetchTask mDataFetchTask = new DataFetchTask(this);
     private JSONObject mJSONObjectData;
 
     @Override
@@ -70,20 +72,9 @@ public class MainActivity extends AppCompatActivity
         getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
         mapFragment.getMapAsync(this);
 
-        DataFetchTask dataFetchTask = new DataFetchTask();
-        dataFetchTask.execute(USGS_URL);
-        Log.d(TAG, "mJsonObjectData is null main act: " + (mJSONObjectData == null));
-//        Log.d(TAG, "Has features: " + jsonObject.has("features"));
+        // code for asynctask
 
-//        try {
-//            Log.d(TAG, jsonObject.getJSONArray("features")
-//                    .getJSONObject(0)
-//                    .getJSONObject("properties")
-//                    .getString("title"));
-//
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
+        mDataFetchTask.execute(USGS_URL);
     }
 
     @Override
@@ -156,36 +147,19 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+
         // Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
     }
 
-    private class DataFetchTask extends AsyncTask<String, Void, JSONObject> {
-
-        @Override
-        protected JSONObject doInBackground(String... strings) {
-            try {
-                OkHttpClient client = new OkHttpClient();
-                Request request = new Request.Builder().url(strings[0]).build();
-                Response response = client.newCall(request).execute();
-//            Log.d(TAG, response.body().string());
-//                Log.d(TAG, "In background called");
-                JSONObject jsonObject = new JSONObject(response.body().string());
-//                Log.d(TAG, "DataFetcher Has features: " + jsonObject.has("features"));
-                return jsonObject;
-            }
-            catch (IOException | JSONException e) {
-                Log.e(TAG, "" + e.getLocalizedMessage());;
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(JSONObject jsonObject) {
-            Log.d(TAG, "on post executure called");
-            mJSONObjectData = jsonObject;
+    @Override
+    public void processFinish(JSONObject result) {
+        mJSONObjectData = result;
+        if(mJSONObjectData != null) {
+            Log.d(TAG, "Not null");
+            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
         }
     }
 }
