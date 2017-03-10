@@ -1,6 +1,5 @@
 package com.chrsrck.quaketracker;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -22,14 +21,9 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.Response;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.IOException;
 
 
 public class MainActivity extends AppCompatActivity
@@ -58,15 +52,6 @@ public class MainActivity extends AppCompatActivity
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -104,13 +89,6 @@ public class MainActivity extends AppCompatActivity
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -120,31 +98,25 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
+        if (id == R.id.all_mag_hour) {
             earthquakeOptionSelected(MAG_ALL_HOUR_URL);
             Toast toast = Toast.makeText(this, "Mag all Hour", Toast.LENGTH_SHORT);
             toast.show();
-        } else if (id == R.id.nav_gallery) {
+        } else if (id == R.id.two_half_mag_day) {
             earthquakeOptionSelected(MAG_2_HALF_DAY_URL);
             Toast toast = Toast.makeText(this, "2.5+ Day", Toast.LENGTH_SHORT);
             toast.show();
 
-        } else if (id == R.id.nav_slideshow) {
+        } else if (id == R.id.four_half_mag_week) {
             earthquakeOptionSelected(MAG_4_HALF_WEEK_URL);
             Toast toast = Toast.makeText(this, "4.5+ Week", Toast.LENGTH_SHORT);
             toast.show();
 
-        } else if (id == R.id.nav_manage) {
+        } else if (id == R.id.significant_mag_month) {
             earthquakeOptionSelected(MAG_SIGNIFICANT_MONTH_URL);
             Toast toast = Toast.makeText(this, "Significant Month", Toast.LENGTH_SHORT);
             toast.show();
 
-        } else if (id == R.id.nav_share) {
-            Toast toast = Toast.makeText(this, "Share", Toast.LENGTH_SHORT);
-            toast.show();
-        } else if (id == R.id.nav_send) {
-            Toast toast = Toast.makeText(this, "Send", Toast.LENGTH_SHORT);
-            toast.show();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -186,9 +158,20 @@ public class MainActivity extends AppCompatActivity
             getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
             mapFragment.getMapAsync(this);
         }
+        else {
+            updateEarthquakesOnMap();
+        }
+    }
+    private void earthquakeOptionSelected(String option) {
+        Log.d(TAG, "earthquakeOptionSelectedCalled called");
+        mMap.clear();
+        mDataFetchTask.cancel(true);
+        mDataFetchTask = new DataFetchTask(this);
+        mDataFetchTask.execute(option);
     }
 
     private LatLng updateEarthquakesOnMap() {
+        Log.d(TAG, "updateEQOnMap called");
         long latitude = 0;
         long longitude = 0;
         String eqTitle;
@@ -216,13 +199,5 @@ public class MainActivity extends AppCompatActivity
             toast.show();
         }
         return quakePos;
-    }
-
-    private void earthquakeOptionSelected(String option) {
-        mMap.clear();
-        mDataFetchTask.cancel(true);
-        mDataFetchTask = new DataFetchTask(this);
-        mDataFetchTask.execute(option);
-        updateEarthquakesOnMap();
     }
 }
