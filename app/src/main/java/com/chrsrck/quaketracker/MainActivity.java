@@ -1,8 +1,10 @@
 package com.chrsrck.quaketracker;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -19,12 +21,24 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback {
 
+    public final String TAG = getClass().getSimpleName();
+    public static final String USGS_URL
+            = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
     private GoogleMap mMap;
+    private JSONObject mJSONObjectData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +69,21 @@ public class MainActivity extends AppCompatActivity
         SupportMapFragment mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
         getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
         mapFragment.getMapAsync(this);
+
+        DataFetchTask dataFetchTask = new DataFetchTask();
+        dataFetchTask.execute(USGS_URL);
+        Log.d(TAG, "mJsonObjectData is null main act: " + (mJSONObjectData == null));
+//        Log.d(TAG, "Has features: " + jsonObject.has("features"));
+
+//        try {
+//            Log.d(TAG, jsonObject.getJSONArray("features")
+//                    .getJSONObject(0)
+//                    .getJSONObject("properties")
+//                    .getString("title"));
+//
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
     }
 
     @Override
@@ -131,5 +160,32 @@ public class MainActivity extends AppCompatActivity
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+    }
+
+    private class DataFetchTask extends AsyncTask<String, Void, JSONObject> {
+
+        @Override
+        protected JSONObject doInBackground(String... strings) {
+            try {
+                OkHttpClient client = new OkHttpClient();
+                Request request = new Request.Builder().url(strings[0]).build();
+                Response response = client.newCall(request).execute();
+//            Log.d(TAG, response.body().string());
+//                Log.d(TAG, "In background called");
+                JSONObject jsonObject = new JSONObject(response.body().string());
+//                Log.d(TAG, "DataFetcher Has features: " + jsonObject.has("features"));
+                return jsonObject;
+            }
+            catch (IOException | JSONException e) {
+                Log.e(TAG, "" + e.getLocalizedMessage());;
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(JSONObject jsonObject) {
+            Log.d(TAG, "on post executure called");
+            mJSONObjectData = jsonObject;
+        }
     }
 }
