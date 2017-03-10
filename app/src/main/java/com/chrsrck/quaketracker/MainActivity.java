@@ -14,6 +14,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -36,10 +37,18 @@ public class MainActivity extends AppCompatActivity
         AsyncResponse {
 
     public final String TAG = getClass().getSimpleName();
-    public static final String USGS_URL
+    public static final String MAG_ALL_HOUR_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
+    public static final String MAG_2_HALF_DAY_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+    public static final String MAG_4_HALF_WEEK_URL
             = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
+    public static final String MAG_SIGNIFICANT_MONTH_URL
+            = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson";
+
+
+
     private GoogleMap mMap;
-    DataFetchTask mDataFetchTask = new DataFetchTask(this);
+    private SupportMapFragment mapFragment;
+    private DataFetchTask mDataFetchTask = new DataFetchTask(this);
     private JSONObject mJSONObjectData;
 
     @Override
@@ -69,8 +78,8 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         // code for asynctask
-
-        mDataFetchTask.execute(USGS_URL);
+        mapFragment = null;
+        mDataFetchTask.execute(MAG_ALL_HOUR_URL);
     }
 
     @Override
@@ -112,17 +121,30 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_camera) {
-            // Handle the camera action
+            earthquakeOptionSelected(MAG_ALL_HOUR_URL);
+            Toast toast = Toast.makeText(this, "Mag all Hour", Toast.LENGTH_SHORT);
+            toast.show();
         } else if (id == R.id.nav_gallery) {
+            earthquakeOptionSelected(MAG_2_HALF_DAY_URL);
+            Toast toast = Toast.makeText(this, "2.5+ Day", Toast.LENGTH_SHORT);
+            toast.show();
 
         } else if (id == R.id.nav_slideshow) {
+            earthquakeOptionSelected(MAG_4_HALF_WEEK_URL);
+            Toast toast = Toast.makeText(this, "4.5+ Week", Toast.LENGTH_SHORT);
+            toast.show();
 
         } else if (id == R.id.nav_manage) {
+            earthquakeOptionSelected(MAG_SIGNIFICANT_MONTH_URL);
+            Toast toast = Toast.makeText(this, "Significant Month", Toast.LENGTH_SHORT);
+            toast.show();
 
         } else if (id == R.id.nav_share) {
-
+            Toast toast = Toast.makeText(this, "Share", Toast.LENGTH_SHORT);
+            toast.show();
         } else if (id == R.id.nav_send) {
-
+            Toast toast = Toast.makeText(this, "Send", Toast.LENGTH_SHORT);
+            toast.show();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -143,11 +165,34 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
+        LatLng quakePos = updateEarthquakesOnMap();
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
+    }
+
+    @Override
+    public void processFinish(JSONObject result) {
+        Log.d(TAG, "ProcessFinished called");
+        mJSONObjectData = result;
+//        if(mJSONObjectData != null) {
+//            Log.d(TAG, "processFinish: jsonObject not null in process finish");
+//            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
+//        }
+//        else {
+//            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
+//        }
+
+        if (mapFragment == null) {
+            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
+            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
+            mapFragment.getMapAsync(this);
+        }
+    }
+
+    private LatLng updateEarthquakesOnMap() {
         long latitude = 0;
         long longitude = 0;
         String eqTitle;
         LatLng quakePos = new LatLng(latitude, longitude);
-        Log.d(TAG, "onMapReady() null jsonObject: " + (mJSONObjectData == null));
         if(mJSONObjectData != null) {
             try {
                 for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
@@ -166,41 +211,18 @@ public class MainActivity extends AppCompatActivity
                 e.printStackTrace();
             }
         }
-//        try {
-//            for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
-//                longitude =
-//                        mJSONObjectData.getJSONArray("features").getJSONObject(i)
-//                                .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
-//                latitude = mJSONObjectData.getJSONArray("features").getJSONObject(i)
-//                        .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
-//                quakePos = new LatLng(latitude, longitude);
-//                eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
-//                        .getJSONObject("properties").getString("title");
-//                mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle));
-//            }
-//
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
-        // Add a marker in Sydney and move the camera
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
+        else {
+            Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
+            toast.show();
+        }
+        return quakePos;
     }
 
-    @Override
-    public void processFinish(JSONObject result) {
-        Log.d(TAG, "ProcessFinished called");
-        mJSONObjectData = result;
-        if(mJSONObjectData != null) {
-            Log.d(TAG, "processFinish: jsonObject not null in process finish");
-            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
-        }
-        else {
-            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
-        }
-
-        SupportMapFragment mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
-        mapFragment.getMapAsync(this);
-
+    private void earthquakeOptionSelected(String option) {
+        mMap.clear();
+        mDataFetchTask.cancel(true);
+        mDataFetchTask = new DataFetchTask(this);
+        mDataFetchTask.execute(option);
+        updateEarthquakesOnMap();
     }
 }
