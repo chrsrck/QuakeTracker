@@ -68,10 +68,6 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        SupportMapFragment mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
-        mapFragment.getMapAsync(this);
-
         // code for asynctask
 
         mDataFetchTask.execute(USGS_URL);
@@ -145,33 +141,66 @@ public class MainActivity extends AppCompatActivity
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        Log.d(TAG, "onMapReady called");
         mMap = googleMap;
         long latitude = 0;
         long longitude = 0;
-        Log.d(TAG, "On Map Ready null json: " + (mJSONObjectData == null));
-        try {
-            longitude =
-                    mJSONObjectData.getJSONArray("features").getJSONObject(0)
-                            .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
-            latitude = mJSONObjectData.getJSONArray("features").getJSONObject(0)
-                    .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
-        } catch (JSONException e) {
-            e.printStackTrace();
+        String eqTitle;
+        LatLng quakePos = new LatLng(latitude, longitude);
+        Log.d(TAG, "onMapReady() null jsonObject: " + (mJSONObjectData == null));
+        if(mJSONObjectData != null) {
+            try {
+                for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
+                    longitude =
+                            mJSONObjectData.getJSONArray("features").getJSONObject(i)
+                                    .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
+                    latitude = mJSONObjectData.getJSONArray("features").getJSONObject(i)
+                            .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
+                    quakePos = new LatLng(latitude, longitude);
+                    eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
+                            .getJSONObject("properties").getString("title");
+                    mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle));
+                }
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
-
-
+//        try {
+//            for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
+//                longitude =
+//                        mJSONObjectData.getJSONArray("features").getJSONObject(i)
+//                                .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
+//                latitude = mJSONObjectData.getJSONArray("features").getJSONObject(i)
+//                        .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
+//                quakePos = new LatLng(latitude, longitude);
+//                eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
+//                        .getJSONObject("properties").getString("title");
+//                mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle));
+//            }
+//
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
         // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(latitude, longitude);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
     }
 
     @Override
     public void processFinish(JSONObject result) {
+        Log.d(TAG, "ProcessFinished called");
         mJSONObjectData = result;
         if(mJSONObjectData != null) {
-            Log.d(TAG, "Not null");
+            Log.d(TAG, "processFinish: jsonObject not null in process finish");
             Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
         }
+        else {
+            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
+        }
+
+        SupportMapFragment mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
+        getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
+        mapFragment.getMapAsync(this);
+
     }
 }

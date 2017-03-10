@@ -29,16 +29,32 @@ public class DataFetchTask extends AsyncTask<String, Void, JSONObject> {
 
     @Override
     protected JSONObject doInBackground(String... strings) {
-        try {
-            Request request = new Request.Builder().url(strings[0]).build();
-            Response response = client.newCall(request).execute();
-            JSONObject jsonObject = new JSONObject(response.body().string());
-            return jsonObject;
+//        JSONObject jsonObject = null;
+//        while (jsonObject == null) {
+//            try {
+//                Request request = new Request.Builder().url(strings[0]).build();
+//                Response response = client.newCall(request).execute();
+//                Log.d(TAG, response.body().string());
+//                jsonObject = new JSONObject(response.body().string());
+//                return jsonObject;
+//            }
+//            catch (IOException | JSONException e) {
+//                Log.e(TAG, "" + e.getLocalizedMessage());
+//                break;
+//            }
+//        }
 
-        }
-        catch (IOException | JSONException e) {
-            Log.e(TAG, "" + e.getLocalizedMessage());
-        }
+        try {
+                Request request = new Request.Builder().url(strings[0]).build();
+                Response response = client.newCall(request).execute();
+//                Log.d(TAG, response.body().string());
+                JSONObject jsonObject = new JSONObject(response.body().string());
+                return jsonObject;
+            }
+            catch (IOException | JSONException e) {
+                Log.e(TAG, "" + e.getLocalizedMessage());
+
+            }
         return null;
     }
 
