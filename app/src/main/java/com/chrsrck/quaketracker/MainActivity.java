@@ -19,6 +19,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -187,7 +188,8 @@ public class MainActivity extends AppCompatActivity
                     quakePos = new LatLng(latitude, longitude);
                     eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
                             .getJSONObject("properties").getString("title");
-                    mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle));
+                    mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
                 }
 
             } catch (JSONException e) {

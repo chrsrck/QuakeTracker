@@ -46,6 +46,4 @@ public class DataFetchTask extends AsyncTask<String, Void, JSONObject> {
     protected void onPostExecute(JSONObject result) {
         mAsyncResponse.processFinish(result);
     }
-
-
 }
