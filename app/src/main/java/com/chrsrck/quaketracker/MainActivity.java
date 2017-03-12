@@ -32,8 +32,10 @@ public class MainActivity extends AppCompatActivity
         AsyncResponse {
 
     public final String TAG = getClass().getSimpleName();
-    public static final String MAG_ALL_HOUR_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
-    public static final String MAG_2_HALF_DAY_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+    public static final String MAG_ALL_HOUR_URL =
+            "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
+    public static final String MAG_2_HALF_DAY_URL =
+            "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
     public static final String MAG_4_HALF_WEEK_URL
             = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
     public static final String MAG_SIGNIFICANT_MONTH_URL
