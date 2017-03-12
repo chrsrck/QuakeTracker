@@ -1,6 +1,5 @@
 package com.chrsrck.quaketracker;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -14,30 +13,39 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.Request;
-import com.squareup.okhttp.Response;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
-
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback {
+        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback,
+        AsyncResponse {
 
     public final String TAG = getClass().getSimpleName();
-    public static final String USGS_URL
+    public static final String MAG_ALL_HOUR_URL =
+            "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
+    public static final String MAG_2_HALF_DAY_URL =
+            "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
+    public static final String MAG_4_HALF_WEEK_URL
             = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
+    public static final String MAG_SIGNIFICANT_MONTH_URL
+            = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson";
+
+
+
     private GoogleMap mMap;
+    private SupportMapFragment mapFragment;
+    private DataFetchTask mDataFetchTask = new DataFetchTask(this);
     private JSONObject mJSONObjectData;
 
     @Override
@@ -48,15 +56,6 @@ public class MainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
@@ -66,24 +65,9 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        SupportMapFragment mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
-        mapFragment.getMapAsync(this);
-
-        DataFetchTask dataFetchTask = new DataFetchTask();
-        dataFetchTask.execute(USGS_URL);
-        Log.d(TAG, "mJsonObjectData is null main act: " + (mJSONObjectData == null));
-//        Log.d(TAG, "Has features: " + jsonObject.has("features"));
-
-//        try {
-//            Log.d(TAG, jsonObject.getJSONArray("features")
-//                    .getJSONObject(0)
-//                    .getJSONObject("properties")
-//                    .getString("title"));
-//
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
+        // code for asynctask
+        mapFragment = null;
+        mDataFetchTask.execute(MAG_ALL_HOUR_URL);
     }
 
     @Override
@@ -108,13 +92,6 @@ public class MainActivity extends AppCompatActivity
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -124,17 +101,24 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
+        if (id == R.id.all_mag_hour) {
+            earthquakeOptionSelected(MAG_ALL_HOUR_URL);
+            Toast toast = Toast.makeText(this, "Mag all Hour", Toast.LENGTH_SHORT);
+            toast.show();
+        } else if (id == R.id.two_half_mag_day) {
+            earthquakeOptionSelected(MAG_2_HALF_DAY_URL);
+            Toast toast = Toast.makeText(this, "2.5+ Day", Toast.LENGTH_SHORT);
+            toast.show();
 
-        } else if (id == R.id.nav_slideshow) {
+        } else if (id == R.id.four_half_mag_week) {
+            earthquakeOptionSelected(MAG_4_HALF_WEEK_URL);
+            Toast toast = Toast.makeText(this, "4.5+ Week", Toast.LENGTH_SHORT);
+            toast.show();
 
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
+        } else if (id == R.id.significant_mag_month) {
+            earthquakeOptionSelected(MAG_SIGNIFICANT_MONTH_URL);
+            Toast toast = Toast.makeText(this, "Significant Month", Toast.LENGTH_SHORT);
+            toast.show();
 
         }
 
@@ -154,38 +138,70 @@ public class MainActivity extends AppCompatActivity
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
+        Log.d(TAG, "onMapReady called");
         mMap = googleMap;
-
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        LatLng quakePos = updateEarthquakesOnMap();
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
     }
 
-    private class DataFetchTask extends AsyncTask<String, Void, JSONObject> {
+    @Override
+    public void processFinish(JSONObject result) {
+        Log.d(TAG, "ProcessFinished called");
+        mJSONObjectData = result;
+//        if(mJSONObjectData != null) {
+//            Log.d(TAG, "processFinish: jsonObject not null in process finish");
+//            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
+//        }
+//        else {
+//            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
+//        }
 
-        @Override
-        protected JSONObject doInBackground(String... strings) {
+        if (mapFragment == null) {
+            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
+            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
+            mapFragment.getMapAsync(this);
+        }
+        else {
+            updateEarthquakesOnMap();
+        }
+    }
+    private void earthquakeOptionSelected(String option) {
+        Log.d(TAG, "earthquakeOptionSelectedCalled called");
+        mMap.clear();
+        mDataFetchTask.cancel(true);
+        mDataFetchTask = new DataFetchTask(this);
+        mDataFetchTask.execute(option);
+    }
+
+    private LatLng updateEarthquakesOnMap() {
+        Log.d(TAG, "updateEQOnMap called");
+        long latitude = 0;
+        long longitude = 0;
+        String eqTitle;
+        LatLng quakePos = new LatLng(latitude, longitude);
+        if(mJSONObjectData != null) {
             try {
-                OkHttpClient client = new OkHttpClient();
-                Request request = new Request.Builder().url(strings[0]).build();
-                Response response = client.newCall(request).execute();
-//            Log.d(TAG, response.body().string());
-//                Log.d(TAG, "In background called");
-                JSONObject jsonObject = new JSONObject(response.body().string());
-//                Log.d(TAG, "DataFetcher Has features: " + jsonObject.has("features"));
-                return jsonObject;
-            }
-            catch (IOException | JSONException e) {
-                Log.e(TAG, "" + e.getLocalizedMessage());;
-            }
-            return null;
-        }
+                for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
+                    longitude =
+                            mJSONObjectData.getJSONArray("features").getJSONObject(i)
+                                    .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
+                    latitude = mJSONObjectData.getJSONArray("features").getJSONObject(i)
+                            .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
+                    quakePos = new LatLng(latitude, longitude);
+                    eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
+                            .getJSONObject("properties").getString("title");
+                    mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
+                }
 
-        @Override
-        protected void onPostExecute(JSONObject jsonObject) {
-            Log.d(TAG, "on post executure called");
-            mJSONObjectData = jsonObject;
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
+        else {
+            Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
+            toast.show();
+        }
+        return quakePos;
     }
 }
