@@ -1,5 +1,8 @@
 package com.chrsrck.quaketracker;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
@@ -146,6 +149,19 @@ public class MainActivity extends AppCompatActivity
         LatLng latLng = new LatLng(0, 0);
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
         mDataFetchTask.execute(MAG_ALL_HOUR_URL);
+
+        ConnectivityManager cm =
+                (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+
+        if (!isConnected) {
+            Toast toast = Toast.makeText(this,
+                    "No internet, can't fetch data.", Toast.LENGTH_LONG);
+            toast.show();
+        }
     }
 
     @Override
