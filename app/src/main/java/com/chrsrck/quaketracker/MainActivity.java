@@ -1,10 +1,7 @@
 package com.chrsrck.quaketracker;
 
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.util.Log;
-import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -26,6 +23,9 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.LinkedList;
+import java.util.ListIterator;
+
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback,
@@ -41,12 +41,11 @@ public class MainActivity extends AppCompatActivity
     public static final String MAG_SIGNIFICANT_MONTH_URL
             = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson";
 
-
-
     private GoogleMap mMap;
     private SupportMapFragment mapFragment;
     private DataFetchTask mDataFetchTask = new DataFetchTask(this);
     private JSONObject mJSONObjectData;
+    private LinkedList<HazardEvent> hazardsList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,9 +64,13 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
+        mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
+        getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
+        mapFragment.getMapAsync(this);
+
         // code for asynctask
         mapFragment = null;
-        mDataFetchTask.execute(MAG_ALL_HOUR_URL);
+        hazardsList = new LinkedList<HazardEvent>();
     }
 
     @Override
@@ -140,8 +143,9 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
-        LatLng quakePos = updateEarthquakesOnMap();
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
+        LatLng latLng = new LatLng(0, 0);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+        mDataFetchTask.execute(MAG_ALL_HOUR_URL);
     }
 
     @Override
@@ -155,30 +159,24 @@ public class MainActivity extends AppCompatActivity
 //        else {
 //            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
 //        }
+        getEarthquakesFromCallback();
+        updateEarthquakeOnMap();
 
-        if (mapFragment == null) {
-            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
-            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
-            mapFragment.getMapAsync(this);
-        }
-        else {
-            updateEarthquakesOnMap();
-        }
     }
     private void earthquakeOptionSelected(String option) {
         Log.d(TAG, "earthquakeOptionSelectedCalled called");
         mMap.clear();
+        hazardsList.clear();
         mDataFetchTask.cancel(true);
         mDataFetchTask = new DataFetchTask(this);
         mDataFetchTask.execute(option);
     }
 
-    private LatLng updateEarthquakesOnMap() {
+    private void getEarthquakesFromCallback() {
         Log.d(TAG, "updateEQOnMap called");
         long latitude = 0;
         long longitude = 0;
         String eqTitle;
-        LatLng quakePos = new LatLng(latitude, longitude);
         if(mJSONObjectData != null) {
             try {
                 for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
@@ -187,21 +185,24 @@ public class MainActivity extends AppCompatActivity
                                     .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
                     latitude = mJSONObjectData.getJSONArray("features").getJSONObject(i)
                             .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
-                    quakePos = new LatLng(latitude, longitude);
                     eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
                             .getJSONObject("properties").getString("title");
-                    mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
+                    hazardsList.add(new HazardEvent(eqTitle, latitude, longitude));
                 }
 
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
-        else {
-            Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
-            toast.show();
+    }
+
+    private void updateEarthquakeOnMap() {
+        ListIterator<HazardEvent> iterator = hazardsList.listIterator(0);
+        while (iterator != null && iterator.hasNext()) {
+            HazardEvent addedEvent = iterator.next();
+            mMap.addMarker(new MarkerOptions().position(addedEvent.getLatLng())
+                    .title(addedEvent.getTitle()).icon(BitmapDescriptorFactory
+                            .fromResource(R.drawable.eq_marker)));
         }
-        return quakePos;
     }
 }
