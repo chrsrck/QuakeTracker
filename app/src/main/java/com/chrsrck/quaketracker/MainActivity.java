@@ -106,26 +106,25 @@ public class MainActivity extends AppCompatActivity
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
+        String option = "";
 
         if (id == R.id.all_mag_hour) {
             earthquakeOptionSelected(MAG_ALL_HOUR_URL);
-            Toast toast = Toast.makeText(this, "Mag all Hour", Toast.LENGTH_SHORT);
-            toast.show();
+            option = "Mag all Hour";
         } else if (id == R.id.two_half_mag_day) {
             earthquakeOptionSelected(MAG_2_HALF_DAY_URL);
-            Toast toast = Toast.makeText(this, "2.5+ Day", Toast.LENGTH_SHORT);
-            toast.show();
-
+            option = "2.5+ Day";
         } else if (id == R.id.four_half_mag_week) {
             earthquakeOptionSelected(MAG_4_HALF_WEEK_URL);
-            Toast toast = Toast.makeText(this, "4.5+ Week", Toast.LENGTH_SHORT);
-            toast.show();
-
+            option = "4.5+ Week";
         } else if (id == R.id.significant_mag_month) {
             earthquakeOptionSelected(MAG_SIGNIFICANT_MONTH_URL);
-            Toast toast = Toast.makeText(this, "Significant Month", Toast.LENGTH_SHORT);
-            toast.show();
+            option = "Signifcant quakes this month";
+        }
 
+        if(isConnectedToInternet()) {
+            Toast toast = Toast.makeText(this, option, Toast.LENGTH_SHORT);
+            toast.show();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -150,35 +149,17 @@ public class MainActivity extends AppCompatActivity
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
         mDataFetchTask.execute(MAG_ALL_HOUR_URL);
 
-        ConnectivityManager cm =
-                (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-
-        if (!isConnected) {
-            Toast toast = Toast.makeText(this,
-                    "No internet, can't fetch data.", Toast.LENGTH_LONG);
-            toast.show();
-        }
+        isConnectedToInternet();
     }
 
     @Override
     public void processFinish(JSONObject result) {
         Log.d(TAG, "ProcessFinished called");
         mJSONObjectData = result;
-//        if(mJSONObjectData != null) {
-//            Log.d(TAG, "processFinish: jsonObject not null in process finish");
-//            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
-//        }
-//        else {
-//            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
-//        }
         getEarthquakesFromCallback();
         updateEarthquakeOnMap();
-
     }
+
     private void earthquakeOptionSelected(String option) {
         Log.d(TAG, "earthquakeOptionSelectedCalled called");
         mMap.clear();
@@ -193,6 +174,8 @@ public class MainActivity extends AppCompatActivity
         long latitude = 0;
         long longitude = 0;
         String eqTitle;
+
+
         if(mJSONObjectData != null) {
             try {
                 for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
@@ -220,5 +203,21 @@ public class MainActivity extends AppCompatActivity
                     .title(addedEvent.getTitle()).icon(BitmapDescriptorFactory
                             .fromResource(R.drawable.eq_marker)));
         }
+    }
+
+    private boolean isConnectedToInternet() {
+        ConnectivityManager cm =
+                (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+
+        if (!isConnected) {
+            Toast toast = Toast.makeText(this,
+                    "No internet, can't fetch data.", Toast.LENGTH_LONG);
+            toast.show();
+        }
+        return isConnected;
     }
 }
