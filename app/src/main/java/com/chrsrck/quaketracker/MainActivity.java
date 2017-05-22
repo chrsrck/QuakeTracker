@@ -174,19 +174,7 @@ public class MainActivity extends AppCompatActivity
         }
 
         // adding plate boundaries
-        GeoJsonLayer plates_layer = null;
-        try {
-            plates_layer = new GeoJsonLayer(mMap, R.raw.plates, getApplicationContext());
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        plates_layer.addLayerToMap();
-
-        GeoJsonLineStringStyle lineStringStyle = plates_layer.getDefaultLineStringStyle();
-        lineStringStyle.setColor(Color.RED);
-
+        addPlatesLayer();
 
         // adding earthquake points
         LatLng quakePos = updateEarthquakesOnMap();
@@ -209,10 +197,12 @@ public class MainActivity extends AppCompatActivity
             mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
             getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
             mapFragment.getMapAsync(this);
+            Log.d(TAG, "MAP FRAG NULL");
         }
         else {
             updateEarthquakesOnMap();
             mDataFetchTask.cancel(true);
+            addPlatesLayer();
         }
     }
     private void earthquakeOptionSelected(String option) {
@@ -253,5 +243,20 @@ public class MainActivity extends AppCompatActivity
             toast.show();
         }
         return quakePos;
+    }
+
+    private void addPlatesLayer() {
+        GeoJsonLayer plates_layer = null;
+        try {
+            plates_layer = new GeoJsonLayer(mMap, R.raw.plates, getApplicationContext());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        plates_layer.addLayerToMap();
+
+        GeoJsonLineStringStyle lineStringStyle = plates_layer.getDefaultLineStringStyle();
+        lineStringStyle.setColor(Color.RED);
     }
 }
