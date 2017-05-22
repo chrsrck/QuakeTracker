@@ -152,15 +152,8 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
+        mMap.getUiSettings().setMapToolbarEnabled(false);
         // adding plate boundaries
-//        try {
-////            String boundary_string = getBoundariesString();
-////            JSONObject boundary_json = new JSONObject(boundary_string);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
 
         GeoJsonLayer plates_layer = null;
         try {
@@ -196,6 +189,7 @@ public class MainActivity extends AppCompatActivity
         }
         else {
             updateEarthquakesOnMap();
+            mDataFetchTask.cancel(true);
         }
     }
     private void earthquakeOptionSelected(String option) {
