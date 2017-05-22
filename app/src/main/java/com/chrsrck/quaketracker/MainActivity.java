@@ -1,5 +1,7 @@
 package com.chrsrck.quaketracker;
 
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -21,8 +23,10 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
 import com.google.maps.android.data.kml.KmlLayer;
 
 import org.json.JSONException;
@@ -152,9 +156,24 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
-        mMap.getUiSettings().setMapToolbarEnabled(false);
-        // adding plate boundaries
 
+        // setting map style
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.map_style));
+
+            if (!success) {
+                Log.e(TAG, "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
+
+        // adding plate boundaries
         GeoJsonLayer plates_layer = null;
         try {
             plates_layer = new GeoJsonLayer(mMap, R.raw.plates, getApplicationContext());
@@ -164,6 +183,10 @@ public class MainActivity extends AppCompatActivity
             e.printStackTrace();
         }
         plates_layer.addLayerToMap();
+
+        GeoJsonLineStringStyle lineStringStyle = plates_layer.getDefaultLineStringStyle();
+        lineStringStyle.setColor(Color.RED);
+
 
         // adding earthquake points
         LatLng quakePos = updateEarthquakesOnMap();
@@ -230,16 +253,5 @@ public class MainActivity extends AppCompatActivity
             toast.show();
         }
         return quakePos;
-    }
-
-    private String getBoundariesString() throws IOException {
-        InputStream inputStream = getResources().openRawResource(R.raw.plates);
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        int length;
-        while ((length = inputStream.read(buffer)) != -1) {
-            result.write(buffer, 0, length);
-        }
-        return result.toString("UTF-8");
     }
 }
