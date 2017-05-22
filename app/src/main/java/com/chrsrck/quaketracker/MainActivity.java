@@ -1,8 +1,7 @@
 package com.chrsrck.quaketracker;
 
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.support.design.widget.NavigationView;
@@ -21,10 +20,24 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
+import com.google.maps.android.data.kml.KmlLayer;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
 
 import java.util.LinkedList;
 import java.util.ListIterator;
@@ -145,19 +158,56 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
-        LatLng latLng = new LatLng(0, 0);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-        mDataFetchTask.execute(MAG_ALL_HOUR_URL);
 
-        isConnectedToInternet();
+
+        // setting map style
+        mMap.getUiSettings().setMapToolbarEnabled(false);
+        try {
+            // Customise the styling of the base map using a JSON object defined
+            // in a raw resource file.
+            boolean success = googleMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                            this, R.raw.map_style));
+
+            if (!success) {
+                Log.e(TAG, "Style parsing failed.");
+            }
+        } catch (Resources.NotFoundException e) {
+            Log.e(TAG, "Can't find style. Error: ", e);
+        }
+
+        // adding plate boundaries
+        addPlatesLayer();
+
+        // adding earthquake points
+        LatLng quakePos = updateEarthquakesOnMap();
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
     }
 
     @Override
     public void processFinish(JSONObject result) {
         Log.d(TAG, "ProcessFinished called");
         mJSONObjectData = result;
-        getEarthquakesFromCallback();
-        updateEarthquakeOnMap();
+
+//        if(mJSONObjectData != null) {
+//            Log.d(TAG, "processFinish: jsonObject not null in process finish");
+//            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
+//        }
+//        else {
+//            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
+//        }
+
+        if (mapFragment == null) {
+            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
+            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
+            mapFragment.getMapAsync(this);
+            Log.d(TAG, "MAP FRAG NULL");
+        }
+        else {
+            updateEarthquakesOnMap();
+            mDataFetchTask.cancel(true);
+            addPlatesLayer();
+        }
     }
 
     private void earthquakeOptionSelected(String option) {
@@ -219,5 +269,20 @@ public class MainActivity extends AppCompatActivity
             toast.show();
         }
         return isConnected;
+    }
+
+    private void addPlatesLayer() {
+        GeoJsonLayer plates_layer = null;
+        try {
+            plates_layer = new GeoJsonLayer(mMap, R.raw.plates, getApplicationContext());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        plates_layer.addLayerToMap();
+
+        GeoJsonLineStringStyle lineStringStyle = plates_layer.getDefaultLineStringStyle();
+        lineStringStyle.setColor(Color.RED);
     }
 }
