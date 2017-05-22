@@ -22,9 +22,13 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.data.kml.KmlLayer;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.IOException;
 
 
 public class MainActivity extends AppCompatActivity
@@ -140,6 +144,17 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
+        // adding plate boundaries
+        try {
+            KmlLayer layer = new KmlLayer(mMap, R.raw.plate_interface_usgs, getApplicationContext());
+            layer.addLayerToMap();
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // adding earthquake points
         LatLng quakePos = updateEarthquakesOnMap();
         mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
     }
