@@ -22,13 +22,21 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.kml.KmlLayer;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParserException;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
 
 
 public class MainActivity extends AppCompatActivity
@@ -145,14 +153,24 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
         // adding plate boundaries
+//        try {
+////            String boundary_string = getBoundariesString();
+////            JSONObject boundary_json = new JSONObject(boundary_string);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+
+        GeoJsonLayer plates_layer = null;
         try {
-            KmlLayer layer = new KmlLayer(mMap, R.raw.plate_interface_usgs, getApplicationContext());
-            layer.addLayerToMap();
-        } catch (XmlPullParserException e) {
-            e.printStackTrace();
+            plates_layer = new GeoJsonLayer(mMap, R.raw.plates, getApplicationContext());
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+        plates_layer.addLayerToMap();
 
         // adding earthquake points
         LatLng quakePos = updateEarthquakesOnMap();
@@ -218,5 +236,16 @@ public class MainActivity extends AppCompatActivity
             toast.show();
         }
         return quakePos;
+    }
+
+    private String getBoundariesString() throws IOException {
+        InputStream inputStream = getResources().openRawResource(R.raw.plates);
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = inputStream.read(buffer)) != -1) {
+            result.write(buffer, 0, length);
+        }
+        return result.toString("UTF-8");
     }
 }
