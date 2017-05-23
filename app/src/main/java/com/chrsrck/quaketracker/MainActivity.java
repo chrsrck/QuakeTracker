@@ -3,7 +3,10 @@ package com.chrsrck.quaketracker;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.util.Log;
+import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -39,9 +42,6 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 
-import java.util.LinkedList;
-import java.util.ListIterator;
-
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback,
@@ -57,11 +57,12 @@ public class MainActivity extends AppCompatActivity
     public static final String MAG_SIGNIFICANT_MONTH_URL
             = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson";
 
+
+
     private GoogleMap mMap;
     private SupportMapFragment mapFragment;
     private DataFetchTask mDataFetchTask = new DataFetchTask(this);
     private JSONObject mJSONObjectData;
-    private LinkedList<HazardEvent> hazardsList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,13 +81,9 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
-        getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
-        mapFragment.getMapAsync(this);
-
         // code for asynctask
         mapFragment = null;
-        hazardsList = new LinkedList<HazardEvent>();
+        mDataFetchTask.execute(MAG_ALL_HOUR_URL);
     }
 
     @Override
@@ -119,25 +116,26 @@ public class MainActivity extends AppCompatActivity
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
-        String option = "";
 
         if (id == R.id.all_mag_hour) {
             earthquakeOptionSelected(MAG_ALL_HOUR_URL);
-            option = "Mag all Hour";
+            Toast toast = Toast.makeText(this, "Mag all Hour", Toast.LENGTH_SHORT);
+            toast.show();
         } else if (id == R.id.two_half_mag_day) {
             earthquakeOptionSelected(MAG_2_HALF_DAY_URL);
-            option = "2.5+ Day";
+            Toast toast = Toast.makeText(this, "2.5+ Day", Toast.LENGTH_SHORT);
+            toast.show();
+
         } else if (id == R.id.four_half_mag_week) {
             earthquakeOptionSelected(MAG_4_HALF_WEEK_URL);
-            option = "4.5+ Week";
+            Toast toast = Toast.makeText(this, "4.5+ Week", Toast.LENGTH_SHORT);
+            toast.show();
+
         } else if (id == R.id.significant_mag_month) {
             earthquakeOptionSelected(MAG_SIGNIFICANT_MONTH_URL);
-            option = "Signifcant quakes this month";
-        }
-
-        if(isConnectedToInternet()) {
-            Toast toast = Toast.makeText(this, option, Toast.LENGTH_SHORT);
+            Toast toast = Toast.makeText(this, "Significant Month", Toast.LENGTH_SHORT);
             toast.show();
+
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -158,7 +156,6 @@ public class MainActivity extends AppCompatActivity
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady called");
         mMap = googleMap;
-
 
         // setting map style
         mMap.getUiSettings().setMapToolbarEnabled(false);
@@ -188,7 +185,6 @@ public class MainActivity extends AppCompatActivity
     public void processFinish(JSONObject result) {
         Log.d(TAG, "ProcessFinished called");
         mJSONObjectData = result;
-
 //        if(mJSONObjectData != null) {
 //            Log.d(TAG, "processFinish: jsonObject not null in process finish");
 //            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
@@ -209,23 +205,20 @@ public class MainActivity extends AppCompatActivity
             addPlatesLayer();
         }
     }
-
     private void earthquakeOptionSelected(String option) {
         Log.d(TAG, "earthquakeOptionSelectedCalled called");
         mMap.clear();
-        hazardsList.clear();
         mDataFetchTask.cancel(true);
         mDataFetchTask = new DataFetchTask(this);
         mDataFetchTask.execute(option);
     }
 
-    private void getEarthquakesFromCallback() {
+    private LatLng updateEarthquakesOnMap() {
         Log.d(TAG, "updateEQOnMap called");
         long latitude = 0;
         long longitude = 0;
         String eqTitle;
-
-
+        LatLng quakePos = new LatLng(latitude, longitude);
         if(mJSONObjectData != null) {
             try {
                 for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
@@ -234,41 +227,22 @@ public class MainActivity extends AppCompatActivity
                                     .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
                     latitude = mJSONObjectData.getJSONArray("features").getJSONObject(i)
                             .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
+                    quakePos = new LatLng(latitude, longitude);
                     eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
                             .getJSONObject("properties").getString("title");
-                    hazardsList.add(new HazardEvent(eqTitle, latitude, longitude));
+                    mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
                 }
 
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
-    }
-
-    private void updateEarthquakeOnMap() {
-        ListIterator<HazardEvent> iterator = hazardsList.listIterator(0);
-        while (iterator != null && iterator.hasNext()) {
-            HazardEvent addedEvent = iterator.next();
-            mMap.addMarker(new MarkerOptions().position(addedEvent.getLatLng())
-                    .title(addedEvent.getTitle()).icon(BitmapDescriptorFactory
-                            .fromResource(R.drawable.eq_marker)));
-        }
-    }
-
-    private boolean isConnectedToInternet() {
-        ConnectivityManager cm =
-                (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-
-        if (!isConnected) {
-            Toast toast = Toast.makeText(this,
-                    "No internet, can't fetch data.", Toast.LENGTH_LONG);
+        else {
+            Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
             toast.show();
         }
-        return isConnected;
+        return quakePos;
     }
 
     private void addPlatesLayer() {
