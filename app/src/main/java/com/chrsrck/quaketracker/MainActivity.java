@@ -24,6 +24,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
@@ -41,6 +42,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.HashSet;
+import java.util.Iterator;
 
 
 public class MainActivity extends AppCompatActivity
@@ -63,6 +66,7 @@ public class MainActivity extends AppCompatActivity
     private SupportMapFragment mapFragment;
     private DataFetchTask mDataFetchTask = new DataFetchTask(this);
     private JSONObject mJSONObjectData;
+    private HashSet<Marker> quakeMarkers;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +87,7 @@ public class MainActivity extends AppCompatActivity
 
         // code for asynctask
         mapFragment = null;
+        quakeMarkers = new HashSet<Marker>(30);
         mDataFetchTask.execute(MAG_ALL_HOUR_URL);
     }
 
@@ -202,12 +207,19 @@ public class MainActivity extends AppCompatActivity
         else {
             updateEarthquakesOnMap();
             mDataFetchTask.cancel(true);
-            addPlatesLayer();
+//            addPlatesLayer();
         }
     }
     private void earthquakeOptionSelected(String option) {
         Log.d(TAG, "earthquakeOptionSelectedCalled called");
-        mMap.clear();
+//        mMap.clear();
+        Iterator<Marker> markerIterator = quakeMarkers.iterator();
+        while (markerIterator.hasNext()) {
+            Marker marker = markerIterator.next();
+            marker.remove();
+        }
+        quakeMarkers.clear();
+
         mDataFetchTask.cancel(true);
         mDataFetchTask = new DataFetchTask(this);
         mDataFetchTask.execute(option);
@@ -230,8 +242,9 @@ public class MainActivity extends AppCompatActivity
                     quakePos = new LatLng(latitude, longitude);
                     eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
                             .getJSONObject("properties").getString("title");
-                    mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
+                    Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
+                    quakeMarkers.add(addedMarker);
                 }
 
             } catch (JSONException e) {
