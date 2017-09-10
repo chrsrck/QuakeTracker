@@ -207,12 +207,10 @@ public class MainActivity extends AppCompatActivity
         else {
             updateEarthquakesOnMap();
             mDataFetchTask.cancel(true);
-//            addPlatesLayer();
         }
     }
     private void earthquakeOptionSelected(String option) {
         Log.d(TAG, "earthquakeOptionSelectedCalled called");
-//        mMap.clear();
         Iterator<Marker> markerIterator = quakeMarkers.iterator();
         while (markerIterator.hasNext()) {
             Marker marker = markerIterator.next();
