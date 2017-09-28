@@ -209,6 +209,7 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "updateEQOnMap called");
         double latitude = 0;
         double longitude = 0;
+        double mag = 0;
         String eqTitle;
         LatLng quakePos = new LatLng(latitude, longitude);
 
@@ -222,7 +223,8 @@ public class MainActivity extends AppCompatActivity
                     FeedContractUSGS.FeedEntry._ID,
                     FeedContractUSGS.FeedEntry.TITLE_COLUMN,
                     FeedContractUSGS.FeedEntry.LONG_COLUMN,
-                    FeedContractUSGS.FeedEntry.LAT_COLUMN
+                    FeedContractUSGS.FeedEntry.LAT_COLUMN,
+                    FeedContractUSGS.FeedEntry.MAG_COLUMN
             };
 
             if (database != null && database.isOpen()) {
@@ -250,16 +252,28 @@ public class MainActivity extends AppCompatActivity
                             cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LAT_COLUMN));
                     longitude = cursor.getDouble(
                             cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LONG_COLUMN));
+                    mag = cursor.getDouble(
+                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.MAG_COLUMN));
                     quakePos = new LatLng(latitude, longitude);
+
 //                Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
 //                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
 //                quakeMarkers.add(addedMarker);
-
                     HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
                     if (coordinateList.size() < 600) {
                         coordinateList.add(quakePos);
                     }
-                    hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
+
+                    if (mag < 4.5) {
+                        hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker_green));
+                    }
+                    else if (mag < 6.0) {
+                        hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker_yellow));
+                    }
+                    else {
+                        hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
+                    }
+
                     mClusterManager.addItem(hazardEvent);
                     test++;
                 }
@@ -278,6 +292,7 @@ public class MainActivity extends AppCompatActivity
             HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
                     .data(coordinateList).build();
             provider.setOpacity(0.5);
+            provider.setRadius(50);
 
             TileOverlayOptions tileOverlayOptions = new TileOverlayOptions().tileProvider(provider);
             mTileOverlay = mMap.addTileOverlay(tileOverlayOptions);
@@ -312,14 +327,12 @@ public class MainActivity extends AppCompatActivity
         mClusterManager.setOnClusterClickListener(new ClusterManager.OnClusterClickListener<HazardEvent>() {
             @Override
             public boolean onClusterClick(Cluster<HazardEvent> cluster) {
-                Toast.makeText(MainActivity.this, "Cluster click", Toast.LENGTH_SHORT).show();
                 return false;
             }
         });
         mClusterManager.setOnClusterItemClickListener(new ClusterManager.OnClusterItemClickListener<HazardEvent>() {
             @Override
             public boolean onClusterItemClick(HazardEvent hazardEvent) {
-                Toast.makeText(MainActivity.this, "Cluster item click", Toast.LENGTH_SHORT).show();
                 return false;
             }
         });
@@ -349,6 +362,7 @@ public class MainActivity extends AppCompatActivity
                 modeButton.setText("Heat Map Mode");
             }
             updateEarthquakesOnMap();
+            addPlatesLayer();
         }
     }
 }
