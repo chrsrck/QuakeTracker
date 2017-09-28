@@ -1,6 +1,7 @@
 package com.chrsrck.quaketracker;
 
 import android.content.res.Resources;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -32,16 +33,7 @@ import com.google.maps.android.data.kml.KmlLayer;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.xmlpull.v1.XmlPullParserException;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -51,28 +43,26 @@ public class MainActivity extends AppCompatActivity
         AsyncResponse {
 
     public final String TAG = getClass().getSimpleName();
-    public static final String MAG_ALL_HOUR_URL =
-            "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson";
-    public static final String MAG_2_HALF_DAY_URL =
-            "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
-    public static final String MAG_4_HALF_WEEK_URL
-            = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
-    public static final String MAG_SIGNIFICANT_MONTH_URL
-            = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson";
-
+    public static final String MAG_ALL_HOUR_URL = FeedContractUSGS.MAG_ALL_HOUR_URL;
+    public static final String MAG_2_HALF_DAY_URL = FeedContractUSGS.MAG_2_HALF_DAY_URL;
+    public static final String MAG_4_HALF_WEEK_URL = FeedContractUSGS.MAG_4_HALF_WEEK_URL;
+    public static final String MAG_SIGNIFICANT_MONTH_URL = FeedContractUSGS.MAG_SIGNIFICANT_MONTH_URL;
 
 
     private GoogleMap mMap;
     private SupportMapFragment mapFragment;
-    private DataFetchTask mDataFetchTask = new DataFetchTask(this);
+    private DataFetchTask mDataFetchTask;
+    private DatabaseCreationTask mDatabaseCreationTask;
+
     private JSONObject mJSONObjectData;
     private HashSet<Marker> quakeMarkers;
+    private FeedReaderDbHelper mDbHelper;
+    private SQLiteDatabase database;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -88,7 +78,24 @@ public class MainActivity extends AppCompatActivity
         // code for asynctask
         mapFragment = null;
         quakeMarkers = new HashSet<Marker>(30);
-        mDataFetchTask.execute(MAG_ALL_HOUR_URL);
+        mDbHelper = new FeedReaderDbHelper(this);
+
+        mDataFetchTask = new DataFetchTask(this);
+        mDataFetchTask.execute(FeedContractUSGS.SIG_EQ_URL);
+    }
+
+    public void onDestroy() {
+
+        if(!mDataFetchTask.isCancelled()) {
+            mDataFetchTask.cancel(true);
+        }
+
+        if(!mDatabaseCreationTask.isCancelled()) {
+            mDatabaseCreationTask.cancel(true);
+        }
+
+        mDbHelper.close();
+        super.onDestroy();
     }
 
     @Override
@@ -187,28 +194,38 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void processFinish(JSONObject result) {
-        Log.d(TAG, "ProcessFinished called");
+    public void dataFetchProcessFinish(JSONObject result) {
+        Log.d(TAG, "dataFetchProcessFinish called");
         mJSONObjectData = result;
-//        if(mJSONObjectData != null) {
-//            Log.d(TAG, "processFinish: jsonObject not null in process finish");
-//            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
+        mDatabaseCreationTask = new DatabaseCreationTask(mDbHelper, this);
+        mDatabaseCreationTask.execute(mJSONObjectData);
+////        if(mJSONObjectData != null) {
+////            Log.d(TAG, "dataFetchProcessFinish: jsonObject not null in process finish");
+////            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
+////        }
+////        else {
+////            Log.d(TAG, "dataFetchProcessFinish: jsonObehct Null in process finish");
+////        }
+//
+//        if (mapFragment == null) {
+//            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
+//            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
+//            mapFragment.getMapAsync(this);
+//            Log.d(TAG, "MAP FRAG NULL");
 //        }
 //        else {
-//            Log.d(TAG, "processFinish: jsonObehct Null in process finish");
+//            updateEarthquakesOnMap();
+//            mDataFetchTask.cancel(true);
 //        }
-
-        if (mapFragment == null) {
-            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
-            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
-            mapFragment.getMapAsync(this);
-            Log.d(TAG, "MAP FRAG NULL");
-        }
-        else {
-            updateEarthquakesOnMap();
-            mDataFetchTask.cancel(true);
-        }
     }
+
+    @Override
+    public void databaseCreationProcessFinish(SQLiteDatabase result) {
+        database = result;
+        Log.d(TAG, "databaseCreationProcessFinish called");
+    }
+
+
     private void earthquakeOptionSelected(String option) {
         Log.d(TAG, "earthquakeOptionSelectedCalled called");
         Iterator<Marker> markerIterator = quakeMarkers.iterator();
@@ -221,6 +238,10 @@ public class MainActivity extends AppCompatActivity
         mDataFetchTask.cancel(true);
         mDataFetchTask = new DataFetchTask(this);
         mDataFetchTask.execute(option);
+    }
+
+    private void createSQLDatabase() {
+
     }
 
     private LatLng updateEarthquakesOnMap() {
