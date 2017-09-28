@@ -11,10 +11,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class FeedReaderDbHelper extends SQLiteOpenHelper {
 
     public static final int DATABASE_VERSION = 1;
-    public static final String DATABASE_NAME = "FeedReader.db";
+    public static final String DATABASE_NAME = "FeedReader.db"; // change to EQ_Feed.db?
 
     private static final String SQL_CREATE_ENTRIES =
-            "CREATE TABLE " + FeedContractUSGS.FeedEntry.TABLE_NAME + " (" +
+            "CREATE TABLE " + FeedContractUSGS.TABLE_NAME + " (" +
                     FeedContractUSGS.FeedEntry._ID + " INTEGER PRIMARY KEY," +
                     FeedContractUSGS.FeedEntry.ID_COLUMN + " TEXT," +
                     FeedContractUSGS.FeedEntry.LAT_COLUMN + " DOUBLE," +
@@ -28,7 +28,7 @@ public class FeedReaderDbHelper extends SQLiteOpenHelper {
                     FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN + " TEXT)";
 
     private static final String SQL_DELETE_ENTRIES =
-            "DROP TABLE IF EXISTS " + FeedContractUSGS.FeedEntry.TABLE_NAME;
+            "DROP TABLE IF EXISTS " + FeedContractUSGS.TABLE_NAME;
 
 
     public FeedReaderDbHelper(Context context) {

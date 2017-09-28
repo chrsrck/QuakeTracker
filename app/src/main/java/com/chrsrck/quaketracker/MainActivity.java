@@ -1,6 +1,7 @@
 package com.chrsrck.quaketracker;
 
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -34,8 +35,10 @@ import com.google.maps.android.data.kml.KmlLayer;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity
@@ -189,8 +192,8 @@ public class MainActivity extends AppCompatActivity
         addPlatesLayer();
 
         // adding earthquake points
-        LatLng quakePos = updateEarthquakesOnMap();
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(quakePos));
+        LatLng initialPos = new LatLng(0, 0);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(initialPos));
     }
 
     @Override
@@ -199,30 +202,31 @@ public class MainActivity extends AppCompatActivity
         mJSONObjectData = result;
         mDatabaseCreationTask = new DatabaseCreationTask(mDbHelper, this);
         mDatabaseCreationTask.execute(mJSONObjectData);
-////        if(mJSONObjectData != null) {
-////            Log.d(TAG, "dataFetchProcessFinish: jsonObject not null in process finish");
-////            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
-////        }
-////        else {
-////            Log.d(TAG, "dataFetchProcessFinish: jsonObehct Null in process finish");
-////        }
-//
-//        if (mapFragment == null) {
-//            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
-//            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
-//            mapFragment.getMapAsync(this);
-//            Log.d(TAG, "MAP FRAG NULL");
+
+//        if(mJSONObjectData != null) {
+//            Log.d(TAG, "dataFetchProcessFinish: jsonObject not null in process finish");
+//            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
 //        }
 //        else {
-//            updateEarthquakesOnMap();
-//            mDataFetchTask.cancel(true);
+//            Log.d(TAG, "dataFetchProcessFinish: jsonObehct Null in process finish");
 //        }
+
+        if (mapFragment == null) {
+            mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
+            getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
+            mapFragment.getMapAsync(this);
+            Log.d(TAG, "MAP FRAG NULL");
+        }
+        else {
+            mDataFetchTask.cancel(true);
+        }
     }
 
     @Override
     public void databaseCreationProcessFinish(SQLiteDatabase result) {
-        database = result;
         Log.d(TAG, "databaseCreationProcessFinish called");
+        database = result;
+        updateEarthquakesOnMap();
     }
 
 
@@ -236,38 +240,53 @@ public class MainActivity extends AppCompatActivity
         quakeMarkers.clear();
 
         mDataFetchTask.cancel(true);
+
         mDataFetchTask = new DataFetchTask(this);
         mDataFetchTask.execute(option);
     }
 
-    private void createSQLDatabase() {
-
-    }
 
     private LatLng updateEarthquakesOnMap() {
         Log.d(TAG, "updateEQOnMap called");
-        long latitude = 0;
-        long longitude = 0;
+        double latitude = 0;
+        double longitude = 0;
         String eqTitle;
         LatLng quakePos = new LatLng(latitude, longitude);
-        if(mJSONObjectData != null) {
-            try {
-                for (int i = 0; i < mJSONObjectData.getJSONArray("features").length(); i++) {
-                    longitude =
-                            mJSONObjectData.getJSONArray("features").getJSONObject(i)
-                                    .getJSONObject("geometry").getJSONArray("coordinates").getLong(0);
-                    latitude = mJSONObjectData.getJSONArray("features").getJSONObject(i)
-                            .getJSONObject("geometry").getJSONArray("coordinates").getLong(1);
-                    quakePos = new LatLng(latitude, longitude);
-                    eqTitle =  mJSONObjectData.getJSONArray("features").getJSONObject(i)
-                            .getJSONObject("properties").getString("title");
-                    Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
+
+        String[] projection = {
+            FeedContractUSGS.FeedEntry._ID,
+                    FeedContractUSGS.FeedEntry.TITLE_COLUMN,
+                    FeedContractUSGS.FeedEntry.LONG_COLUMN,
+            FeedContractUSGS.FeedEntry.LAT_COLUMN
+        };
+
+        if (database != null && database.isOpen()) {
+            String selection = FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN + " = ?";
+            String[] selectionArgs = {"explosion"};
+            String sortOrder = FeedContractUSGS.FeedEntry._ID + " DESC";
+
+            Cursor cursor = database.query(
+                    FeedContractUSGS.TABLE_NAME,                     // The table to query
+                    projection,                               // The columns to return
+                    selection,                                // The columns for the WHERE clause
+                    selectionArgs,                            // The values for the WHERE clause
+                    null,                                     // don't group the rows
+                    null,                                     // don't filter by row groups
+                    sortOrder                                 // The sort order
+            );
+
+
+            while (cursor.moveToNext()) {
+                eqTitle = cursor.getString(
+                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
+                latitude = cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LAT_COLUMN));
+                longitude = cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LONG_COLUMN));
+                quakePos = new LatLng(latitude, longitude);
+                        Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
                     quakeMarkers.add(addedMarker);
-                }
-
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
         }
         else {
@@ -290,5 +309,7 @@ public class MainActivity extends AppCompatActivity
 
         GeoJsonLineStringStyle lineStringStyle = plates_layer.getDefaultLineStringStyle();
         lineStringStyle.setColor(Color.RED);
+        lineStringStyle.setWidth(3);
+
     }
 }

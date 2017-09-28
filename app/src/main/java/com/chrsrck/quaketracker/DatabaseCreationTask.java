@@ -73,7 +73,7 @@ public class DatabaseCreationTask extends AsyncTask<JSONObject, Void, SQLiteData
                         contentValues.put(FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN,
                                 propertiesJSONObject.getString(FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN));
 
-                        long rowID = db.insert(FeedContractUSGS.FeedEntry.TABLE_NAME, null, contentValues);
+                        long rowID = db.insert(FeedContractUSGS.TABLE_NAME, null, contentValues);
                         contentValues.clear();
                     }
                 } catch (JSONException e) {

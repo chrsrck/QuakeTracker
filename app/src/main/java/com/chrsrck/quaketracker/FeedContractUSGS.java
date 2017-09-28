@@ -35,6 +35,8 @@ public final class FeedContractUSGS {
     public static final String MAG_SIGNIFICANT_MONTH_URL
             = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson";
 
+    public static final String TABLE_NAME = "SIG_EQ";
+
     /* Defines tables contents
      */
     public static class FeedEntry implements BaseColumns {
@@ -46,7 +48,6 @@ public final class FeedContractUSGS {
 
         /* Specified in Features geojson
          */
-        public static final String TABLE_NAME = "SIG_EQ";
         public static final String TITLE_COLUMN = "title";
         public static final String MAG_COLUMN = "mag";
         public static final String PLACE_COLUMN = "place";
