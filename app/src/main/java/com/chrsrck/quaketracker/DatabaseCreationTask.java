@@ -21,10 +21,10 @@ public class DatabaseCreationTask extends AsyncTask<JSONObject, Void, SQLiteData
     private FeedReaderDbHelper mDbHelper;
     private SQLiteDatabase db;
 
-    public DatabaseCreationTask(FeedReaderDbHelper dbHelper, AsyncResponse listener) {
+    public DatabaseCreationTask(FeedReaderDbHelper dbHelper, AsyncResponse listener, Context context) {
         mAsyncResponse = listener;
         mDbHelper = dbHelper;
-
+        mContext = context;
     }
 
     @Override
@@ -32,8 +32,8 @@ public class DatabaseCreationTask extends AsyncTask<JSONObject, Void, SQLiteData
         try {
             JSONObject jsonObjectRequested = jsonObjects[0];
             db = mDbHelper.getWritableDatabase();
-            ContentValues contentValues = new ContentValues();
 
+            ContentValues contentValues = new ContentValues();
             if(jsonObjectRequested != null) {
                 try {
                     JSONArray eventArray = jsonObjectRequested.getJSONArray("features");

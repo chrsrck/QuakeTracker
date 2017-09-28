@@ -92,8 +92,9 @@ public class MainActivity extends AppCompatActivity
         mDataFetchTask.execute(FeedContractUSGS.SIG_EQ_URL);
     }
 
-    public void onDestroy() {
-
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "On Stop Called");
         if(!mDataFetchTask.isCancelled()) {
             mDataFetchTask.cancel(true);
         }
@@ -101,8 +102,13 @@ public class MainActivity extends AppCompatActivity
         if(!mDatabaseCreationTask.isCancelled()) {
             mDatabaseCreationTask.cancel(true);
         }
-
         mDbHelper.close();
+        this.deleteDatabase("FeedReader.db");
+        super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
         super.onDestroy();
     }
 
@@ -205,7 +211,7 @@ public class MainActivity extends AppCompatActivity
     public void dataFetchProcessFinish(JSONObject result) {
         Log.d(TAG, "dataFetchProcessFinish called");
         mJSONObjectData = result;
-        mDatabaseCreationTask = new DatabaseCreationTask(mDbHelper, this);
+        mDatabaseCreationTask = new DatabaseCreationTask(mDbHelper, this, this);
         mDatabaseCreationTask.execute(mJSONObjectData);
 
 //        if(mJSONObjectData != null) {
@@ -223,7 +229,7 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "MAP FRAG NULL");
         }
         else {
-            mDataFetchTask.cancel(true);
+            mDatabaseCreationTask.cancel(true);
         }
     }
 
@@ -281,6 +287,7 @@ public class MainActivity extends AppCompatActivity
             );
 
             setUpClusterer();
+            int test = 0;
             while (cursor.moveToNext()) {
                 eqTitle = cursor.getString(
                         cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
@@ -296,8 +303,10 @@ public class MainActivity extends AppCompatActivity
                 HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
                 hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
                 mClusterManager.addItem(hazardEvent);
+                test++;
             }
             mClusterManager.cluster();
+            Log.d(TAG, "Test Equals: " + test);
         }
         else {
             Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);

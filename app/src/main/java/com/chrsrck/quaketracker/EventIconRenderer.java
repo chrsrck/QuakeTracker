@@ -30,6 +30,6 @@ public class EventIconRenderer extends DefaultClusterRenderer<HazardEvent> {
 
     @Override
     protected boolean shouldRenderAsCluster(Cluster<HazardEvent> cluster) {
-        return cluster.getSize() > 20; // when count of markers is more than 3, render as cluster
+        return cluster.getSize() > 3; // when count of markers is more than 3, render as cluster
     }
 }
