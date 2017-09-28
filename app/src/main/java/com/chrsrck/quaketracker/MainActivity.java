@@ -28,6 +28,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.clustering.Cluster;
+import com.google.maps.android.clustering.ClusterManager;
+import com.google.maps.android.clustering.algo.GridBasedAlgorithm;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
 import com.google.maps.android.data.kml.KmlLayer;
@@ -59,8 +62,10 @@ public class MainActivity extends AppCompatActivity
 
     private JSONObject mJSONObjectData;
     private HashSet<Marker> quakeMarkers;
+    private HashSet<HazardEvent> mHazardEvents;
     private FeedReaderDbHelper mDbHelper;
     private SQLiteDatabase database;
+    private ClusterManager<HazardEvent> mClusterManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -262,7 +267,7 @@ public class MainActivity extends AppCompatActivity
 
         if (database != null && database.isOpen()) {
             String selection = FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN + " = ?";
-            String[] selectionArgs = {"explosion"};
+            String[] selectionArgs = {"earthquake"};
             String sortOrder = FeedContractUSGS.FeedEntry._ID + " DESC";
 
             Cursor cursor = database.query(
@@ -275,7 +280,7 @@ public class MainActivity extends AppCompatActivity
                     sortOrder                                 // The sort order
             );
 
-
+            setUpClusterer();
             while (cursor.moveToNext()) {
                 eqTitle = cursor.getString(
                         cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
@@ -284,10 +289,15 @@ public class MainActivity extends AppCompatActivity
                 longitude = cursor.getDouble(
                         cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LONG_COLUMN));
                 quakePos = new LatLng(latitude, longitude);
-                        Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
-                    quakeMarkers.add(addedMarker);
+//                Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
+//                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
+//                quakeMarkers.add(addedMarker);
+
+                HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
+                hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
+                mClusterManager.addItem(hazardEvent);
             }
+            mClusterManager.cluster();
         }
         else {
             Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
@@ -312,4 +322,39 @@ public class MainActivity extends AppCompatActivity
         lineStringStyle.setWidth(3);
 
     }
+
+    private void setUpClusterer() {
+
+        // Initialize the manager with the context and the map.
+        // (Activity extends context, so we can pass 'this' in the constructor.)
+        mClusterManager = new ClusterManager<HazardEvent>(this, mMap);
+        EventIconRenderer eventIconRenderer = new EventIconRenderer(this, mMap, mClusterManager);
+        mClusterManager.setOnClusterClickListener(new ClusterManager.OnClusterClickListener<HazardEvent>() {
+            @Override
+            public boolean onClusterClick(Cluster<HazardEvent> cluster) {
+                Toast.makeText(MainActivity.this, "Cluster click", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
+        mClusterManager.setOnClusterItemClickListener(new ClusterManager.OnClusterItemClickListener<HazardEvent>() {
+            @Override
+            public boolean onClusterItemClick(HazardEvent hazardEvent) {
+                Toast.makeText(MainActivity.this, "Cluster item click", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
+
+        mClusterManager.setRenderer(eventIconRenderer);
+//        mClusterManager.setAlgorithm(new GridBasedAlgorithm<HazardEvent>());
+
+
+        // Point the map's listeners at the listeners implemented by the cluster
+        // manager.
+        mMap.setOnCameraIdleListener(mClusterManager);
+        mMap.setOnMarkerClickListener(mClusterManager);
+
+        // Add cluster items (markers) to the cluster manager.
+        mClusterManager.setAnimation(true);
+    }
+
 }
