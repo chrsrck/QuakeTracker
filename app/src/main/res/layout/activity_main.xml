@@ -1,39 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v4.widget.DrawerLayout
+<RelativeLayout
     android:id="@+id/drawer_layout"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    tools:openDrawer="start">
+    android:background="?attr/colorPrimaryDark"
+    android:fitsSystemWindows="true">
+
+    <TextView
+        android:id="@+id/mode_label_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/modeButton"
+        android:layout_alignBottom="@+id/modeButton"
+        android:layout_alignParentStart="true"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:gravity="center"
+        android:padding="3dp"
+        android:text="Select mode..."
+        android:textColor="@android:color/background_light"
+        android:textSize="20sp"/>
+
+    <Button
+        android:id="@+id/modeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:text="Heat map mode"
+        android:textSize="14sp"/>
+
 
     <FrameLayout
         android:id="@+id/map"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_below="@+id/modeButton">
 
-        <ProgressBar android:indeterminate="true"
-                     android:layout_width="50dp" android:layout_height="50dp"
-                     android:id="@+id/marker_progress" style="?android:attr/progressBarStyle"
-                     android:layout_gravity="center_vertical|center_horizontal"/>
+        <ProgressBar
+            android:id="@+id/marker_progress"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_gravity="center_vertical|center_horizontal"
+            android:indeterminate="true"
+            />
     </FrameLayout>
 
 
-
-    <include
-        layout="@layout/app_bar_main"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
-
-    <android.support.design.widget.NavigationView
-        android:id="@+id/nav_view"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:fitsSystemWindows="true"
-        app:headerLayout="@layout/nav_header_main"
-        app:menu="@menu/activity_main_drawer"/>
-
-</android.support.v4.widget.DrawerLayout>
+</RelativeLayout>

@@ -17,6 +17,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -28,25 +29,30 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.GridBasedAlgorithm;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
 import com.google.maps.android.data.kml.KmlLayer;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback,
-        AsyncResponse {
+        implements OnMapReadyCallback,
+        AsyncResponse, Button.OnClickListener {
 
     public final String TAG = getClass().getSimpleName();
     public static final String MAG_ALL_HOUR_URL = FeedContractUSGS.MAG_ALL_HOUR_URL;
@@ -63,25 +69,23 @@ public class MainActivity extends AppCompatActivity
     private JSONObject mJSONObjectData;
     private HashSet<Marker> quakeMarkers;
     private HashSet<HazardEvent> mHazardEvents;
+    private LinkedList<LatLng> coordinateList;
+
     private FeedReaderDbHelper mDbHelper;
     private SQLiteDatabase database;
     private ClusterManager<HazardEvent> mClusterManager;
+    private TileOverlay mTileOverlay;
+    private boolean isMarkerMode;
+
+    private Button modeButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
+        modeButton = (Button) findViewById(R.id.modeButton);
+        modeButton.setOnClickListener(this);
 
         // code for asynctask
         mapFragment = null;
@@ -90,16 +94,18 @@ public class MainActivity extends AppCompatActivity
 
         mDataFetchTask = new DataFetchTask(this);
         mDataFetchTask.execute(FeedContractUSGS.SIG_EQ_URL);
+        isMarkerMode = true;
+        coordinateList = new LinkedList<>();
     }
 
     @Override
     protected void onStop() {
         Log.d(TAG, "On Stop Called");
-        if(!mDataFetchTask.isCancelled()) {
+        if (!mDataFetchTask.isCancelled()) {
             mDataFetchTask.cancel(true);
         }
 
-        if(!mDatabaseCreationTask.isCancelled()) {
+        if (!mDatabaseCreationTask.isCancelled()) {
             mDatabaseCreationTask.cancel(true);
         }
         mDbHelper.close();
@@ -110,63 +116,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onDestroy() {
         super.onDestroy();
-    }
-
-    @Override
-    public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        if (drawer.isDrawerOpen(GravityCompat.START)) {
-            drawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return super.onOptionsItemSelected(item);
-    }
-
-    @SuppressWarnings("StatementWithEmptyBody")
-    @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
-        int id = item.getItemId();
-
-        if (id == R.id.all_mag_hour) {
-            earthquakeOptionSelected(MAG_ALL_HOUR_URL);
-            Toast toast = Toast.makeText(this, "Mag all Hour", Toast.LENGTH_SHORT);
-            toast.show();
-        } else if (id == R.id.two_half_mag_day) {
-            earthquakeOptionSelected(MAG_2_HALF_DAY_URL);
-            Toast toast = Toast.makeText(this, "2.5+ Day", Toast.LENGTH_SHORT);
-            toast.show();
-
-        } else if (id == R.id.four_half_mag_week) {
-            earthquakeOptionSelected(MAG_4_HALF_WEEK_URL);
-            Toast toast = Toast.makeText(this, "4.5+ Week", Toast.LENGTH_SHORT);
-            toast.show();
-
-        } else if (id == R.id.significant_mag_month) {
-            earthquakeOptionSelected(MAG_SIGNIFICANT_MONTH_URL);
-            Toast toast = Toast.makeText(this, "Significant Month", Toast.LENGTH_SHORT);
-            toast.show();
-
-        }
-
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        drawer.closeDrawer(GravityCompat.START);
-        return true;
     }
 
     /**
@@ -227,8 +176,7 @@ public class MainActivity extends AppCompatActivity
             getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
             mapFragment.getMapAsync(this);
             Log.d(TAG, "MAP FRAG NULL");
-        }
-        else {
+        } else {
             mDatabaseCreationTask.cancel(true);
         }
     }
@@ -264,53 +212,76 @@ public class MainActivity extends AppCompatActivity
         String eqTitle;
         LatLng quakePos = new LatLng(latitude, longitude);
 
-        String[] projection = {
-            FeedContractUSGS.FeedEntry._ID,
+        if (isMarkerMode) {
+            if (mTileOverlay != null) {
+                mTileOverlay.remove();
+            }
+
+
+            String[] projection = {
+                    FeedContractUSGS.FeedEntry._ID,
                     FeedContractUSGS.FeedEntry.TITLE_COLUMN,
                     FeedContractUSGS.FeedEntry.LONG_COLUMN,
-            FeedContractUSGS.FeedEntry.LAT_COLUMN
-        };
+                    FeedContractUSGS.FeedEntry.LAT_COLUMN
+            };
 
-        if (database != null && database.isOpen()) {
-            String selection = FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN + " = ?";
-            String[] selectionArgs = {"earthquake"};
-            String sortOrder = FeedContractUSGS.FeedEntry._ID + " DESC";
+            if (database != null && database.isOpen()) {
 
-            Cursor cursor = database.query(
-                    FeedContractUSGS.TABLE_NAME,                     // The table to query
-                    projection,                               // The columns to return
-                    selection,                                // The columns for the WHERE clause
-                    selectionArgs,                            // The values for the WHERE clause
-                    null,                                     // don't group the rows
-                    null,                                     // don't filter by row groups
-                    sortOrder                                 // The sort order
-            );
+                String selection = FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN + " = ?";
+                String[] selectionArgs = {"earthquake"};
+                String sortOrder = FeedContractUSGS.FeedEntry._ID + " DESC";
 
-            setUpClusterer();
-            int test = 0;
-            while (cursor.moveToNext()) {
-                eqTitle = cursor.getString(
-                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
-                latitude = cursor.getDouble(
-                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LAT_COLUMN));
-                longitude = cursor.getDouble(
-                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LONG_COLUMN));
-                quakePos = new LatLng(latitude, longitude);
+                Cursor cursor = database.query(
+                        FeedContractUSGS.TABLE_NAME,                     // The table to query
+                        projection,                               // The columns to return
+                        selection,                                // The columns for the WHERE clause
+                        selectionArgs,                            // The values for the WHERE clause
+                        null,                                     // don't group the rows
+                        null,                                     // don't filter by row groups
+                        sortOrder                                 // The sort order
+                );
+
+                setUpClusterer();
+                int test = 0;
+                while (cursor.moveToNext()) {
+                    eqTitle = cursor.getString(
+                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
+                    latitude = cursor.getDouble(
+                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LAT_COLUMN));
+                    longitude = cursor.getDouble(
+                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LONG_COLUMN));
+                    quakePos = new LatLng(latitude, longitude);
 //                Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
 //                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
 //                quakeMarkers.add(addedMarker);
 
-                HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
-                hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
-                mClusterManager.addItem(hazardEvent);
-                test++;
+                    HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
+                    if (coordinateList.size() < 600) {
+                        coordinateList.add(quakePos);
+                    }
+                    hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
+                    mClusterManager.addItem(hazardEvent);
+                    test++;
+                }
+
+                mClusterManager.cluster();
+                Log.d(TAG, "Test Equals: " + test);
+            } else {
+                Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
+                toast.show();
             }
-            mClusterManager.cluster();
-            Log.d(TAG, "Test Equals: " + test);
-        }
-        else {
-            Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
-            toast.show();
+        } else {
+
+            mMap.clear();
+            mClusterManager.clearItems();
+
+            HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
+                    .data(coordinateList).build();
+            provider.setOpacity(0.5);
+
+            TileOverlayOptions tileOverlayOptions = new TileOverlayOptions().tileProvider(provider);
+            mTileOverlay = mMap.addTileOverlay(tileOverlayOptions);
+
         }
         return quakePos;
     }
@@ -366,4 +337,18 @@ public class MainActivity extends AppCompatActivity
         mClusterManager.setAnimation(true);
     }
 
+    @Override
+    public void onClick(View view) {
+        if (view.getId() == modeButton.getId()) {
+            if (isMarkerMode) {
+                isMarkerMode = false;
+                modeButton.setText("Marker Mode");
+            }
+            else {
+                isMarkerMode = true;
+                modeButton.setText("Heat Map Mode");
+            }
+            updateEarthquakesOnMap();
+        }
+    }
 }
