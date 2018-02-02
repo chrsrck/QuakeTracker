@@ -44,6 +44,6 @@ public class DataFetchTask extends AsyncTask<String, Void, JSONObject> {
 
     @Override
     protected void onPostExecute(JSONObject result) {
-        mAsyncResponse.processFinish(result);
+        mAsyncResponse.dataFetchProcessFinish(result);
     }
 }

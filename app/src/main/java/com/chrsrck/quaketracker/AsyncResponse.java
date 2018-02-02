@@ -1,5 +1,6 @@
 package com.chrsrck.quaketracker;
 
+import android.database.sqlite.SQLiteDatabase;
 import org.json.JSONObject;
 
 /**
@@ -7,5 +8,6 @@ import org.json.JSONObject;
  */
 
 public interface AsyncResponse {
-    void processFinish(JSONObject result);
+    void dataFetchProcessFinish(JSONObject result);
+    void databaseCreationProcessFinish(SQLiteDatabase result);
 }
