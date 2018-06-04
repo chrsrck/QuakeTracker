@@ -31,6 +31,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
+import com.google.maps.android.MarkerManager;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.clustering.algo.GridBasedAlgorithm;
@@ -55,11 +56,6 @@ public class MainActivity extends AppCompatActivity
         AsyncResponse, Button.OnClickListener {
 
     public final String TAG = getClass().getSimpleName();
-    public static final String MAG_ALL_HOUR_URL = FeedContractUSGS.MAG_ALL_HOUR_URL;
-    public static final String MAG_2_HALF_DAY_URL = FeedContractUSGS.MAG_2_HALF_DAY_URL;
-    public static final String MAG_4_HALF_WEEK_URL = FeedContractUSGS.MAG_4_HALF_WEEK_URL;
-    public static final String MAG_SIGNIFICANT_MONTH_URL = FeedContractUSGS.MAG_SIGNIFICANT_MONTH_URL;
-
 
     private GoogleMap mMap;
     private SupportMapFragment mapFragment;
@@ -67,12 +63,11 @@ public class MainActivity extends AppCompatActivity
     private DatabaseCreationTask mDatabaseCreationTask;
 
     private JSONObject mJSONObjectData;
-    private HashSet<Marker> quakeMarkers;
-    private HashSet<HazardEvent> mHazardEvents;
-    private LinkedList<LatLng> coordinateList;
+
+    private HashSet<LatLng> coordinateSet;
+    private SQLiteDatabase database;
 
     private FeedReaderDbHelper mDbHelper;
-    private SQLiteDatabase database;
     private ClusterManager<HazardEvent> mClusterManager;
     private TileOverlay mTileOverlay;
     private boolean isMarkerMode;
@@ -89,13 +84,12 @@ public class MainActivity extends AppCompatActivity
 
         // code for asynctask
         mapFragment = null;
-        quakeMarkers = new HashSet<Marker>(30);
         mDbHelper = new FeedReaderDbHelper(this);
-
         mDataFetchTask = new DataFetchTask(this);
         mDataFetchTask.execute(FeedContractUSGS.SIG_EQ_URL);
+
         isMarkerMode = true;
-        coordinateList = new LinkedList<>();
+        coordinateSet = new HashSet<>();
     }
 
     @Override
@@ -189,22 +183,6 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-    private void earthquakeOptionSelected(String option) {
-        Log.d(TAG, "earthquakeOptionSelectedCalled called");
-        Iterator<Marker> markerIterator = quakeMarkers.iterator();
-        while (markerIterator.hasNext()) {
-            Marker marker = markerIterator.next();
-            marker.remove();
-        }
-        quakeMarkers.clear();
-
-        mDataFetchTask.cancel(true);
-
-        mDataFetchTask = new DataFetchTask(this);
-        mDataFetchTask.execute(option);
-    }
-
-
     private LatLng updateEarthquakesOnMap() {
         Log.d(TAG, "updateEQOnMap called");
         double latitude = 0;
@@ -244,7 +222,7 @@ public class MainActivity extends AppCompatActivity
                 );
 
                 setUpClusterer();
-                int test = 0;
+
                 while (cursor.moveToNext()) {
                     eqTitle = cursor.getString(
                             cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
@@ -256,13 +234,7 @@ public class MainActivity extends AppCompatActivity
                             cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.MAG_COLUMN));
                     quakePos = new LatLng(latitude, longitude);
 
-//                Marker addedMarker = mMap.addMarker(new MarkerOptions().position(quakePos).title(eqTitle)
-//                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker)));
-//                quakeMarkers.add(addedMarker);
                     HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
-                    if (coordinateList.size() < 600) {
-                        coordinateList.add(quakePos);
-                    }
 
                     if (mag < 4.5) {
                         hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker_green));
@@ -273,24 +245,24 @@ public class MainActivity extends AppCompatActivity
                     else {
                         hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
                     }
-
+                    coordinateSet.add(hazardEvent.getPosition());
                     mClusterManager.addItem(hazardEvent);
-                    test++;
                 }
 
                 mClusterManager.cluster();
-                Log.d(TAG, "Test Equals: " + test);
             } else {
                 Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
                 toast.show();
             }
         } else {
-
-            mMap.clear();
+            //mMap.clear();
+//            MarkerManager.Collection coll = mClusterManager.getMarkerCollection();
+//            coll.clear();
             mClusterManager.clearItems();
+            mClusterManager.cluster();
 
             HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
-                    .data(coordinateList).build();
+                    .data(coordinateSet).build();
             provider.setOpacity(0.5);
             provider.setRadius(50);
 
@@ -362,7 +334,7 @@ public class MainActivity extends AppCompatActivity
                 modeButton.setText("Heat Map Mode");
             }
             updateEarthquakesOnMap();
-            addPlatesLayer();
+            //addPlatesLayer();
         }
     }
 }
