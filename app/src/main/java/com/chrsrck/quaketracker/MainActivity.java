@@ -1,22 +1,18 @@
 package com.chrsrck.quaketracker;
 
+import android.content.Context;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
-import android.support.design.widget.NavigationView;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -27,35 +23,26 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
-import com.google.maps.android.MarkerManager;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterManager;
-import com.google.maps.android.clustering.algo.GridBasedAlgorithm;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonLineStringStyle;
-import com.google.maps.android.data.kml.KmlLayer;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity
         implements OnMapReadyCallback,
         AsyncResponse, Button.OnClickListener {
 
-    public final String TAG = getClass().getSimpleName();
+    public static final String TAG = MainActivity.class.getSimpleName();
 
     private GoogleMap mMap;
     private SupportMapFragment mapFragment;
@@ -83,10 +70,19 @@ public class MainActivity extends AppCompatActivity
         modeButton.setOnClickListener(this);
 
         // code for asynctask
-        mapFragment = null;
+        setUpMapFragment();
         mDbHelper = new FeedReaderDbHelper(this);
-        mDataFetchTask = new DataFetchTask(this);
-        mDataFetchTask.execute(FeedContractUSGS.SIG_EQ_URL);
+        if (isOnline()) {
+            mDataFetchTask = new DataFetchTask(this);
+            mDataFetchTask.execute(FeedContractUSGS.SIG_EQ_URL);
+        }
+        else {
+            AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+            dialog.setTitle(R.string.dialog_title_connection);
+            dialog.setMessage(R.string.dialog_message_connection);
+            dialog.create();
+            dialog.show();
+        }
 
         isMarkerMode = true;
         coordinateSet = new HashSet<>();
@@ -164,7 +160,9 @@ public class MainActivity extends AppCompatActivity
 //        else {
 //            Log.d(TAG, "dataFetchProcessFinish: jsonObehct Null in process finish");
 //        }
+    }
 
+    public void setUpMapFragment() {
         if (mapFragment == null) {
             mapFragment = (SupportMapFragment) SupportMapFragment.newInstance();
             getSupportFragmentManager().beginTransaction().replace(R.id.map, mapFragment).commit();
@@ -255,9 +253,6 @@ public class MainActivity extends AppCompatActivity
                 toast.show();
             }
         } else {
-            //mMap.clear();
-//            MarkerManager.Collection coll = mClusterManager.getMarkerCollection();
-//            coll.clear();
             mClusterManager.clearItems();
             mClusterManager.cluster();
 
@@ -334,7 +329,15 @@ public class MainActivity extends AppCompatActivity
                 modeButton.setText("Heat Map Mode");
             }
             updateEarthquakesOnMap();
-            //addPlatesLayer();
         }
+    }
+
+
+    public boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 }

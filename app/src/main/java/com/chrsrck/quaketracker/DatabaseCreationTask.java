@@ -15,7 +15,7 @@ import org.json.JSONObject;
  */
 
 public class DatabaseCreationTask extends AsyncTask<JSONObject, Void, SQLiteDatabase> {
-    public final String TAG = getClass().getSimpleName();
+    private static final String TAG = DatabaseCreationTask.class.getSimpleName();
     public AsyncResponse mAsyncResponse = null;
     private Context mContext;
     private FeedReaderDbHelper mDbHelper;
