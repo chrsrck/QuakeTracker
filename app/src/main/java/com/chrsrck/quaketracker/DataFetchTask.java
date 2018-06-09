@@ -18,7 +18,7 @@ import java.io.IOException;
 
 public class DataFetchTask extends AsyncTask<String, Void, JSONObject> {
 
-    public final String TAG = getClass().getSimpleName();
+    private static final String TAG = DataFetchTask.class.getSimpleName();
     public AsyncResponse mAsyncResponse = null;
     private OkHttpClient client;
 
