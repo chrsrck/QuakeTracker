@@ -70,13 +70,15 @@ public class MainActivity extends AppCompatActivity
         modeButton.setOnClickListener(this);
 
         // code for asynctask
-        setUpMapFragment();
         mDbHelper = new FeedReaderDbHelper(this);
         if (isOnline()) {
             mDataFetchTask = new DataFetchTask(this);
             mDataFetchTask.execute(FeedContractUSGS.SIG_EQ_URL);
+            //mDataFetchTask.execute(FeedContractUSGS.MAG_SIGNIFICANT_MONTH_URL);
+            setUpMapFragment();
         }
         else {
+
             AlertDialog.Builder dialog = new AlertDialog.Builder(this);
             dialog.setTitle(R.string.dialog_title_connection);
             dialog.setMessage(R.string.dialog_message_connection);
@@ -138,12 +140,15 @@ public class MainActivity extends AppCompatActivity
             Log.e(TAG, "Can't find style. Error: ", e);
         }
 
+        LatLng initialPos = new LatLng(0, 0);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(initialPos));
+
         // adding plate boundaries
         addPlatesLayer();
 
         // adding earthquake points
-        LatLng initialPos = new LatLng(0, 0);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(initialPos));
+        // await creation of database here
+        //updateEarthquakesOnMap();
     }
 
     @Override
@@ -152,7 +157,7 @@ public class MainActivity extends AppCompatActivity
         mJSONObjectData = result;
         mDatabaseCreationTask = new DatabaseCreationTask(mDbHelper, this, this);
         mDatabaseCreationTask.execute(mJSONObjectData);
-
+        // set up fragment here for the circle
 //        if(mJSONObjectData != null) {
 //            Log.d(TAG, "dataFetchProcessFinish: jsonObject not null in process finish");
 //            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
@@ -177,6 +182,7 @@ public class MainActivity extends AppCompatActivity
     public void databaseCreationProcessFinish(SQLiteDatabase result) {
         Log.d(TAG, "databaseCreationProcessFinish called");
         database = result;
+        // await map fragment ready?
         updateEarthquakesOnMap();
     }
 
