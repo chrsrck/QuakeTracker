@@ -78,7 +78,6 @@ public class MainActivity extends AppCompatActivity
             setUpMapFragment();
         }
         else {
-
             AlertDialog.Builder dialog = new AlertDialog.Builder(this);
             dialog.setTitle(R.string.dialog_title_connection);
             dialog.setMessage(R.string.dialog_message_connection);
@@ -183,97 +182,95 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "databaseCreationProcessFinish called");
         database = result;
         // await map fragment ready?
-        updateEarthquakesOnMap();
+        createClusterMap();
     }
 
 
-    private LatLng updateEarthquakesOnMap() {
-        Log.d(TAG, "updateEQOnMap called");
+    private void createClusterMap() {
+        Log.d(TAG, "createClusterMap called");
         double latitude = 0;
         double longitude = 0;
         double mag = 0;
         String eqTitle;
         LatLng quakePos = new LatLng(latitude, longitude);
 
-        if (isMarkerMode) {
-            if (mTileOverlay != null) {
-                mTileOverlay.remove();
-            }
-
-
-            String[] projection = {
-                    FeedContractUSGS.FeedEntry._ID,
-                    FeedContractUSGS.FeedEntry.TITLE_COLUMN,
-                    FeedContractUSGS.FeedEntry.LONG_COLUMN,
-                    FeedContractUSGS.FeedEntry.LAT_COLUMN,
-                    FeedContractUSGS.FeedEntry.MAG_COLUMN
-            };
-
-            if (database != null && database.isOpen()) {
-
-                String selection = FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN + " = ?";
-                String[] selectionArgs = {"earthquake"};
-                String sortOrder = FeedContractUSGS.FeedEntry._ID + " DESC";
-
-                Cursor cursor = database.query(
-                        FeedContractUSGS.TABLE_NAME,                     // The table to query
-                        projection,                               // The columns to return
-                        selection,                                // The columns for the WHERE clause
-                        selectionArgs,                            // The values for the WHERE clause
-                        null,                                     // don't group the rows
-                        null,                                     // don't filter by row groups
-                        sortOrder                                 // The sort order
-                );
-
-                setUpClusterer();
-
-                while (cursor.moveToNext()) {
-                    eqTitle = cursor.getString(
-                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
-                    latitude = cursor.getDouble(
-                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LAT_COLUMN));
-                    longitude = cursor.getDouble(
-                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LONG_COLUMN));
-                    mag = cursor.getDouble(
-                            cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.MAG_COLUMN));
-                    quakePos = new LatLng(latitude, longitude);
-
-                    HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
-
-                    if (mag < 4.5) {
-                        hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker_green));
-                    }
-                    else if (mag < 6.0) {
-                        hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker_yellow));
-                    }
-                    else {
-                        hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
-                    }
-                    coordinateSet.add(hazardEvent.getPosition());
-                    mClusterManager.addItem(hazardEvent);
-                }
-
-                mClusterManager.cluster();
-            } else {
-                Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
-                toast.show();
-            }
-        } else {
-            mClusterManager.clearItems();
-            mClusterManager.cluster();
-
-            HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
-                    .data(coordinateSet).build();
-            provider.setOpacity(0.5);
-            provider.setRadius(50);
-
-            TileOverlayOptions tileOverlayOptions = new TileOverlayOptions().tileProvider(provider);
-            mTileOverlay = mMap.addTileOverlay(tileOverlayOptions);
-
+        if (mTileOverlay != null) {
+            mTileOverlay.remove();
         }
-        return quakePos;
+
+
+        String[] projection = {
+                FeedContractUSGS.FeedEntry._ID,
+                FeedContractUSGS.FeedEntry.TITLE_COLUMN,
+                FeedContractUSGS.FeedEntry.LONG_COLUMN,
+                FeedContractUSGS.FeedEntry.LAT_COLUMN,
+                FeedContractUSGS.FeedEntry.MAG_COLUMN
+        };
+
+        if (database != null && database.isOpen()) {
+
+            String selection = FeedContractUSGS.FeedEntry.TYPE_EVENT_COLUMN + " = ?";
+            String[] selectionArgs = {"earthquake"};
+            String sortOrder = FeedContractUSGS.FeedEntry._ID + " DESC";
+
+            Cursor cursor = database.query(
+                    FeedContractUSGS.TABLE_NAME,                     // The table to query
+                    projection,                               // The columns to return
+                    selection,                                // The columns for the WHERE clause
+                    selectionArgs,                            // The values for the WHERE clause
+                    null,                                     // don't group the rows
+                    null,                                     // don't filter by row groups
+                    sortOrder                                 // The sort order
+            );
+
+            setUpClusterer();
+
+            while (cursor.moveToNext()) {
+                eqTitle = cursor.getString(
+                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.TITLE_COLUMN));
+                latitude = cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LAT_COLUMN));
+                longitude = cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.LONG_COLUMN));
+                mag = cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(FeedContractUSGS.FeedEntry.MAG_COLUMN));
+                quakePos = new LatLng(latitude, longitude);
+
+                HazardEvent hazardEvent = new HazardEvent(eqTitle, quakePos);
+
+                if (mag < 4.5) {
+                    hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker_green));
+                }
+                else if (mag < 6.0) {
+                    hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker_yellow));
+                }
+                else {
+                    hazardEvent.setIcon(BitmapDescriptorFactory.fromResource(R.drawable.eq_marker));
+                }
+                coordinateSet.add(hazardEvent.getPosition());
+                mClusterManager.addItem(hazardEvent);
+            }
+
+            mClusterManager.cluster();
+        } else {
+            Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
+            toast.show();
+        }
+
     }
 
+    private void createHeatMap() {
+        mClusterManager.clearItems();
+        mClusterManager.cluster();
+
+        HeatmapTileProvider provider = new HeatmapTileProvider.Builder()
+                .data(coordinateSet).build();
+        provider.setOpacity(0.5);
+        provider.setRadius(50);
+
+        TileOverlayOptions tileOverlayOptions = new TileOverlayOptions().tileProvider(provider);
+        mTileOverlay = mMap.addTileOverlay(tileOverlayOptions);
+    }
     private void addPlatesLayer() {
         GeoJsonLayer plates_layer = null;
         try {
@@ -313,7 +310,6 @@ public class MainActivity extends AppCompatActivity
         mClusterManager.setRenderer(eventIconRenderer);
 //        mClusterManager.setAlgorithm(new GridBasedAlgorithm<HazardEvent>());
 
-
         // Point the map's listeners at the listeners implemented by the cluster
         // manager.
         mMap.setOnCameraIdleListener(mClusterManager);
@@ -329,12 +325,14 @@ public class MainActivity extends AppCompatActivity
             if (isMarkerMode) {
                 isMarkerMode = false;
                 modeButton.setText("Marker Mode");
+                createHeatMap();
             }
             else {
                 isMarkerMode = true;
                 modeButton.setText("Heat Map Mode");
+                createClusterMap();
             }
-            updateEarthquakesOnMap();
+            //updateEarthquakesOnMap();
         }
     }
 
