@@ -14,14 +14,14 @@ import org.json.JSONObject;
  * Created by chrsrck on 9/27/17.
  */
 
-public class DatabaseCreationTask extends AsyncTask<JSONObject, Void, SQLiteDatabase> {
-    private static final String TAG = DatabaseCreationTask.class.getSimpleName();
+public class DatabaseUpdateTask extends AsyncTask<JSONObject, Void, SQLiteDatabase> {
+    private static final String TAG = DatabaseUpdateTask.class.getSimpleName();
     public AsyncResponse mAsyncResponse = null;
     private Context mContext;
     private FeedReaderDbHelper mDbHelper;
     private SQLiteDatabase db;
 
-    public DatabaseCreationTask(FeedReaderDbHelper dbHelper, AsyncResponse listener, Context context) {
+    public DatabaseUpdateTask(FeedReaderDbHelper dbHelper, AsyncResponse listener, Context context) {
         mAsyncResponse = listener;
         mDbHelper = dbHelper;
         mContext = context;
@@ -80,6 +80,7 @@ public class DatabaseCreationTask extends AsyncTask<JSONObject, Void, SQLiteData
                     e.printStackTrace();
                 }
             }
+            //db.close();
         }
         catch (Exception e) {
             Log.e(TAG, "" + e.getLocalizedMessage());

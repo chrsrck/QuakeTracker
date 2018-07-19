@@ -6,4 +6,8 @@
 
     <string name="dialog_title_connection">No Internet Connection</string>
     <string name="dialog_message_connection">Quake Tracker was unable to load Google Maps and earthquake data. Enable cellular data or wifi.</string>
+
+    <string name="bottom_nav_map">Map</string>
+    <string name="bottom_nav_list">List</string>
+    <string name="bottom_nav_filter">Filter</string>
 </resources>

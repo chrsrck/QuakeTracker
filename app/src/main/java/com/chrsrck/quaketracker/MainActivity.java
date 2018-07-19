@@ -9,12 +9,19 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 
+import android.support.annotation.NonNull;
+import android.support.design.widget.NavigationView;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 import android.widget.Toast;
+import android.support.v4.view.GravityCompat;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -37,9 +44,8 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.HashSet;
 
-
 public class MainActivity extends AppCompatActivity
-        implements OnMapReadyCallback,
+        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback,
         AsyncResponse, Button.OnClickListener {
 
     public static final String TAG = MainActivity.class.getSimpleName();
@@ -47,7 +53,7 @@ public class MainActivity extends AppCompatActivity
     private GoogleMap mMap;
     private SupportMapFragment mapFragment;
     private DataFetchTask mDataFetchTask;
-    private DatabaseCreationTask mDatabaseCreationTask;
+    private DatabaseUpdateTask mDatabaseUpdateTask;
 
     private JSONObject mJSONObjectData;
 
@@ -59,15 +65,23 @@ public class MainActivity extends AppCompatActivity
     private TileOverlay mTileOverlay;
     private boolean isMarkerMode;
 
-    private Button modeButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        modeButton = (Button) findViewById(R.id.modeButton);
-        modeButton.setOnClickListener(this);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.setDrawerListener(toggle);
+        toggle.syncState();
+
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
 
         // code for asynctask
         mDbHelper = new FeedReaderDbHelper(this);
@@ -89,6 +103,7 @@ public class MainActivity extends AppCompatActivity
         coordinateSet = new HashSet<>();
     }
 
+    // TODO: Replace this code with update versioning in SQL model
     @Override
     protected void onStop() {
         Log.d(TAG, "On Stop Called");
@@ -96,8 +111,8 @@ public class MainActivity extends AppCompatActivity
             mDataFetchTask.cancel(true);
         }
 
-        if (!mDatabaseCreationTask.isCancelled()) {
-            mDatabaseCreationTask.cancel(true);
+        if (!mDatabaseUpdateTask.isCancelled()) {
+            mDatabaseUpdateTask.cancel(true);
         }
         mDbHelper.close();
         this.deleteDatabase("FeedReader.db");
@@ -106,6 +121,16 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onDestroy() {
+        Log.d(TAG, "On Destroyed Called");
+        if (!mDataFetchTask.isCancelled()) {
+            mDataFetchTask.cancel(true);
+        }
+
+        if (!mDatabaseUpdateTask.isCancelled()) {
+            mDatabaseUpdateTask.cancel(true);
+        }
+        mDbHelper.close();
+        this.deleteDatabase("FeedReader.db");
         super.onDestroy();
     }
 
@@ -125,6 +150,7 @@ public class MainActivity extends AppCompatActivity
 
         // setting map style
         mMap.getUiSettings().setMapToolbarEnabled(false);
+
         try {
             // Customise the styling of the base map using a JSON object defined
             // in a raw resource file.
@@ -154,16 +180,8 @@ public class MainActivity extends AppCompatActivity
     public void dataFetchProcessFinish(JSONObject result) {
         Log.d(TAG, "dataFetchProcessFinish called");
         mJSONObjectData = result;
-        mDatabaseCreationTask = new DatabaseCreationTask(mDbHelper, this, this);
-        mDatabaseCreationTask.execute(mJSONObjectData);
-        // set up fragment here for the circle
-//        if(mJSONObjectData != null) {
-//            Log.d(TAG, "dataFetchProcessFinish: jsonObject not null in process finish");
-//            Log.d(TAG, "Has features: " + (mJSONObjectData.has("features")));
-//        }
-//        else {
-//            Log.d(TAG, "dataFetchProcessFinish: jsonObehct Null in process finish");
-//        }
+        mDatabaseUpdateTask = new DatabaseUpdateTask(mDbHelper, this, this);
+        mDatabaseUpdateTask.execute(mJSONObjectData);
     }
 
     public void setUpMapFragment() {
@@ -173,7 +191,7 @@ public class MainActivity extends AppCompatActivity
             mapFragment.getMapAsync(this);
             Log.d(TAG, "MAP FRAG NULL");
         } else {
-            mDatabaseCreationTask.cancel(true);
+            mDatabaseUpdateTask.cancel(true);
         }
     }
 
@@ -206,6 +224,7 @@ public class MainActivity extends AppCompatActivity
                 FeedContractUSGS.FeedEntry.LAT_COLUMN,
                 FeedContractUSGS.FeedEntry.MAG_COLUMN
         };
+
 
         if (database != null && database.isOpen()) {
 
@@ -252,6 +271,7 @@ public class MainActivity extends AppCompatActivity
             }
 
             mClusterManager.cluster();
+            database.close();
         } else {
             Toast toast = Toast.makeText(this, "Unable to retrieve Data", Toast.LENGTH_LONG);
             toast.show();
@@ -271,6 +291,7 @@ public class MainActivity extends AppCompatActivity
         TileOverlayOptions tileOverlayOptions = new TileOverlayOptions().tileProvider(provider);
         mTileOverlay = mMap.addTileOverlay(tileOverlayOptions);
     }
+
     private void addPlatesLayer() {
         GeoJsonLayer plates_layer = null;
         try {
@@ -289,7 +310,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void setUpClusterer() {
-
         // Initialize the manager with the context and the map.
         // (Activity extends context, so we can pass 'this' in the constructor.)
         mClusterManager = new ClusterManager<HazardEvent>(this, mMap);
@@ -319,23 +339,6 @@ public class MainActivity extends AppCompatActivity
         mClusterManager.setAnimation(true);
     }
 
-    @Override
-    public void onClick(View view) {
-        if (view.getId() == modeButton.getId()) {
-            if (isMarkerMode) {
-                isMarkerMode = false;
-                modeButton.setText("Marker Mode");
-                createHeatMap();
-            }
-            else {
-                isMarkerMode = true;
-                modeButton.setText("Heat Map Mode");
-                createClusterMap();
-            }
-            //updateEarthquakesOnMap();
-        }
-    }
-
 
     public boolean isOnline() {
         ConnectivityManager cm =
@@ -343,5 +346,49 @@ public class MainActivity extends AppCompatActivity
 
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
         return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+    }
+
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+
+//        if (id == R.id.all_mag_hour) {
+//            earthquakeOptionSelected(FeedContractUSGS.MAG_ALL_HOUR_URL);
+//            Toast toast = Toast.makeText(this, "Mag all Hour", Toast.LENGTH_SHORT);
+//            toast.show();
+//        } else if (id == R.id.two_half_mag_day) {
+//            earthquakeOptionSelected(FeedContractUSGS.MAG_2_HALF_DAY_URL);
+//            Toast toast = Toast.makeText(this, "2.5+ Day", Toast.LENGTH_SHORT);
+//            toast.show();
+//
+//        } else if (id == R.id.four_half_mag_week) {
+//            earthquakeOptionSelected(FeedContractUSGS.MAG_4_HALF_WEEK_URL);
+//            Toast toast = Toast.makeText(this, "4.5+ Week", Toast.LENGTH_SHORT);
+//            toast.show();
+//
+//        } else if (id == R.id.significant_mag_month) {
+//            earthquakeOptionSelected(FeedContractUSGS.MAG_SIGNIFICANT_MONTH_URL);
+//            Toast toast = Toast.makeText(this, "Significant Month", Toast.LENGTH_SHORT);
+//            toast.show();
+//        }
+
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        drawer.closeDrawer(GravityCompat.START);
+        return true;
+    }
+
+    private void earthquakeOptionSelected(String option) {
+        Log.d(TAG, "earthquakeOptionSelectedCalled called");
+        mDataFetchTask.cancel(true);
+
+        mDbHelper.onUpgrade(database, mDbHelper.DATABASE_VERSION, mDbHelper.DATABASE_VERSION + 1);
+
+        mDataFetchTask = new DataFetchTask(this);
+        mDataFetchTask.execute(option);
+    }
+
+    @Override
+    public void onClick(View view) {
+
     }
 }

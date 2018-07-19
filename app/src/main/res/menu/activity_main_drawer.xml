@@ -4,17 +4,13 @@
     <group android:checkableBehavior="single">
         <item
             android:id="@+id/all_mag_hour"
-            android:title="Past Hour - All Quakes"/>
+            android:title="Settings"/>
         <item
             android:id="@+id/two_half_mag_day"
-            android:title="Past Day - 2.5+ Magnitude "/>
+            android:title="App Appearance"/>
         <item
             android:id="@+id/four_half_mag_week"
-            android:title="Past Week - 4.5+ Magnitude"/>
-        <item
-            android:id="@+id/significant_mag_month"
-            android:title="Past Month - Signifcant Quakes"/>
+            android:title="About"/>
+
     </group>
-
-
 </menu>
