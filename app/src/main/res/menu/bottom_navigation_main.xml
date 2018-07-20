@@ -2,19 +2,19 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/action_map"
-        android:enabled="true"
+        android:checked="true"
         android:icon="@drawable/ic_map"
         android:title="@string/bottom_nav_map"
         />
     <item
         android:id="@+id/action_list"
-        android:enabled="false"
+        android:checked="false"
         android:icon="@drawable/ic_quake_list"
         android:title="@string/bottom_nav_list"
         />
     <item
         android:id="@+id/action_filter"
-        android:enabled="false"
+        android:checked="false"
         android:icon="@drawable/ic_filter"
         android:title="@string/bottom_nav_filter"
         />

@@ -10,6 +10,7 @@ import android.net.NetworkInfo;
 import android.os.Bundle;
 
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -63,7 +64,6 @@ public class MainActivity extends AppCompatActivity
     private FeedReaderDbHelper mDbHelper;
     private ClusterManager<HazardEvent> mClusterManager;
     private TileOverlay mTileOverlay;
-    private boolean isMarkerMode;
 
 
     @Override
@@ -83,6 +83,23 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
+        BottomNavigationView bottomNavigationView = (BottomNavigationView) findViewById(R.id.bottom_navigation);
+        bottomNavigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.action_map:
+                        Log.d(TAG, "map selected");
+                    case R.id.action_list:
+                        Log.d(TAG, "list selected");
+                    case R.id.action_filter:
+                        Log.d(TAG, "filter selected");
+                }
+                return true;
+            }
+        });
+
+
         // code for asynctask
         mDbHelper = new FeedReaderDbHelper(this);
         if (isOnline()) {
@@ -99,7 +116,6 @@ public class MainActivity extends AppCompatActivity
             dialog.show();
         }
 
-        isMarkerMode = true;
         coordinateSet = new HashSet<>();
     }
 
